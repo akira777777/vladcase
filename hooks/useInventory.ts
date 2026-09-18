@@ -1,35 +1,24 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+import { useApp } from '@/context/AppContext';
 import { Item } from '@/types';
 
 export function useInventory() {
-  const [inventory, setInventory] = useState<Item[]>([]);
+  const {
+    inventory,
+    addItem,
+    removeItem,
+    sellItem,
+    sellAll,
+    isLoaded,
+  } = useApp();
 
-  useEffect(() => {
-    const savedInventory = localStorage.getItem('vladcase_inventory');
-    if (savedInventory) {
-      try {
-        setInventory(JSON.parse(savedInventory));
-      } catch (e) {
-        console.error("Failed to parse inventory", e);
-      }
-    }
-  }, []);
-
-  const addItem = (item: Item) => {
-    setInventory(prev => {
-      const newInventory = [...prev, item];
-      localStorage.setItem('vladcase_inventory', JSON.stringify(newInventory));
-      return newInventory;
-    });
+  return {
+    inventory,
+    addItem,
+    removeItem,
+    sellItem,
+    sellAll,
+    isLoaded,
   };
-
-  const removeItem = (itemId: string) => {
-    setInventory(prev => {
-      const newInventory = prev.filter(i => i.id !== itemId);
-      localStorage.setItem('vladcase_inventory', JSON.stringify(newInventory));
-      return newInventory;
-    });
-  };
-
-  return { inventory, addItem, removeItem };
 }

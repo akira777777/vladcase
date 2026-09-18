@@ -1,16 +1,19 @@
+'use client';
+
 import React from 'react';
 import Navbar from '@/components/ui/Navbar';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-background text-primary selection:bg-accent/30">
+    <div className="min-h-screen bg-background text-text-primary selection:bg-accent/30 flex flex-col justify-between">
       <Navbar />
-      <main className="pt-20">
+      <main className="pt-20 flex-1">
         {children}
       </main>
-      <footer className="border-t border-white/5 py-8 mt-20">
-        <div className="max-w-7xl mx-auto px-4 text-center text-secondary text-sm">
-          © {new Date().getFullYear()} VLADCASE. Virtual economy simulator.
+      <footer className="border-t border-white/10 py-8 mt-20 bg-surface-dark/60 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 text-center text-text-muted text-xs space-y-2">
+          <p>© {new Date().getFullYear()} VLADCASE. High fidelity CS2 case opening & economy simulator.</p>
+          <p className="text-[11px] text-text-muted/70">Virtual items simulator. All currency and drop simulations are purely for entertainment.</p>
         </div>
       </footer>
     </div>

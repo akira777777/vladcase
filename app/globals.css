@@ -1,21 +1,57 @@
-/* Rarity Colors */
-.rarity-common { color: #bdc3c7; border-color: #bdc3c7; }
-.rarity-uncommon { color: #2ecc71; border-color: #2ecc71; }
-.rarity-rare { color: #3498db; border-color: #3498db; }
-.rarity-mythic { color: #9b59b6; border-color: #9b59b6; }
-.rarity-legendary { color: #f1c40f; border-color: #f1c40f; }
-.rarity-exotic { color: #e74c3c; border-color: #e74c3c; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Glassmorphism Effects */
-.glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+:root {
+  --color-consumer: #B0C3D9;
+  --color-industrial: #5E98D9;
+  --color-milspec: #4B69FF;
+  --color-restricted: #8847FF;
+  --color-classified: #D32CE6;
+  --color-covert: #EB4B4B;
+  --color-special: #FFD700;
 }
 
-/* Metallic Text Effect */
+body {
+  background-color: #080A0D;
+  color: #F5F7FA;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: rgba(17, 21, 28, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Metallic Heading Effect */
 .metallic-text {
-  background: linear-gradient(to bottom, #ffffff 0%, #a0a0a0 50%, #ffffff 100%);
+  background: linear-gradient(135deg, #FFFFFF 0%, #B8C2CC 50%, #E2E8F0 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Glowing text */
+.text-glow {
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0C0F14;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E2633;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2E3A4E;
 }

@@ -1,3 +1,56 @@
+import { Rarity } from "../types";
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function getRarityColor(rarity: Rarity): string {
+  switch (rarity) {
+    case 'Consumer':
+      return '#B0C3D9';
+    case 'Industrial':
+      return '#5E98D9';
+    case 'Mil-Spec':
+      return '#4B69FF';
+    case 'Restricted':
+      return '#8847FF';
+    case 'Classified':
+      return '#D32CE6';
+    case 'Covert':
+      return '#EB4B4B';
+    case 'Special Item':
+      return '#FFD700';
+    default:
+      return '#FFFFFF';
+  }
+}
+
+export function getRarityBadgeClass(rarity: Rarity): string {
+  switch (rarity) {
+    case 'Consumer':
+      return 'bg-zinc-700/50 text-zinc-300 border-zinc-500/30';
+    case 'Industrial':
+      return 'bg-blue-900/40 text-blue-300 border-blue-500/40';
+    case 'Mil-Spec':
+      return 'bg-blue-700/40 text-blue-200 border-blue-400/50 shadow-[0_0_10px_rgba(75,105,255,0.3)]';
+    case 'Restricted':
+      return 'bg-purple-900/40 text-purple-200 border-purple-400/50 shadow-[0_0_10px_rgba(136,71,255,0.3)]';
+    case 'Classified':
+      return 'bg-pink-900/40 text-pink-200 border-pink-400/50 shadow-[0_0_12px_rgba(211,44,230,0.35)]';
+    case 'Covert':
+      return 'bg-red-900/40 text-red-200 border-red-500/60 shadow-[0_0_15px_rgba(235,75,75,0.4)]';
+    case 'Special Item':
+      return 'bg-amber-900/50 text-amber-200 border-amber-400/70 shadow-[0_0_20px_rgba(255,215,0,0.5)]';
+    default:
+      return 'bg-white/10 text-white border-white/20';
+  }
+}
+
 export function getRandomWeighted(items: { id: string; dropChance: number }[], totalWeight: number): string {
   const random = Math.random() * totalWeight;
   let currentSum = 0;

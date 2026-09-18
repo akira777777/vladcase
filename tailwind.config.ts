@@ -1,4 +1,10 @@
-module {
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
   theme: {
     extend: {
       colors: {
@@ -6,37 +12,56 @@ module {
         surface: {
           DEFAULT: "#11151C",
           dark: "#0C0F14",
-          light: "#151A22",
+          light: "#161D27",
+          hover: "#1E2633",
         },
         text: {
           primary: "#F5F7FA",
           secondary: "#8E96A3",
+          muted: "#5B6475",
         },
         rarity: {
-          consumer: "#A1A1AA",
-          industrial: "#3B82F6",
-          mil_spec: "#2563EB",
-          restricted: "#A855F7",
-          classified: "#EC4899",
-          covert: "#EF4444",
-          special: "#F59E0B",
+          consumer: "#B0C3D9",
+          industrial: "#5E98D9",
+          milspec: "#4B69FF",
+          restricted: "#8847FF",
+          classified: "#D32CE6",
+          covert: "#EB4B4B",
+          special: "#FFD700",
         },
-        accent: "#22D3EE",
+        accent: {
+          DEFAULT: "#22D3EE",
+          hover: "#06B6D4",
+          glow: "rgba(34, 211, 238, 0.4)",
+        },
+        gold: {
+          DEFAULT: "#F59E0B",
+          glow: "rgba(245, 158, 11, 0.4)",
+        },
       },
       fontFamily: {
-        sans: ["Inter", "Manrope", "Space Grotesk", "sans-serif"],
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
         display: ["Space Grotesk", "sans-serif"],
       },
-      backgroundImage: {
-        'glass-gradient': "linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%)",
-        'metallic-gradient': "linear-gradient(180deg, #1A202C 0%, #11151C 100%)",
+      boxShadow: {
+        'glow-accent': "0 0 25px rgba(34, 211, 238, 0.35)",
+        'glow-gold': "0 0 30px rgba(245, 158, 11, 0.4)",
+        'glow-covert': "0 0 25px rgba(235, 75, 75, 0.35)",
+        'card': "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+      },
+      animation: {
+        'pulse-subtle': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shimmer': 'shimmer 2.5s infinite linear',
+      },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
     },
   },
-  content: [
-    "./app/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}",
-    "./pages/**/*.{js,ts,jsx,tsx}",
-  ],
   plugins: [],
-} satisfies typeof import("tailwindcss").Config
+};
+
+export default config;
