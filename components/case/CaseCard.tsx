@@ -18,17 +18,39 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData }) => {
       setIsSpinning(true);
       setResult(null);
       
-      // Запускаем открытие
+      // Вычисляем результат сразу для честности
       const winningItem = openCase(caseData);
       
-      // В реальной системе мы бы использовали пропсы для запуска анимации рулетки
-      // Здесь мы имитируем завершение через 5 секунд (время анимации + задержка)
+      // Запускаем анимацию рулетки
+      // В текущей реализации Roulette сам вызывает onComplete, 
+      // но нам нужно синхронизировать логику открытия и анимации.
+      // Мы передадим результат в onComplete, чтобы он "зафиксировался".
+      
+      // Используем небольшой хак: Roulette внутри себя должен знать, 
+      // какой именно предмет выпадает, чтобы анимация была честной.
+      // Но так как мы хотим "настоящую" анимацию, мы можем передать 
+      // заранее определенный результат.
+    }
+  };
+
+  // Поскольку openCase возвращает результат мгновенно, мы передаем его в рулетку
+  // Но для эффекта "случайности" визуально мы хотим, чтобы рулетка крутилась.
+  
+  // Исправленная логика:
+  const [winningItem, setWinningItem] = useState<Item | null>(null);
+
+  const startOpening = () => {
+    if (balance >= caseData.price && !isSpinning && !result) {
+      setIsSpinning(true);
+      setResult(null);
+      const item = openCase(caseData);
+      setWinningItem(item);
+      
+      // Запускаем анимацию через 100мс чтобы избежать конфликтов рендеринга
       setTimeout(() => {
-        setResult(winningItem);
         updateBalance(-caseData.price);
         addXp(50);
-        setIsSpinning(false);
-      }, 5000);
+      }, 5000); // Время совпадает с анимацией рулетки
     }
   };
 
@@ -49,7 +71,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData }) => {
 
       {!result ? (
         <button 
-          onClick={handleOpen}
+          onClick={startOpening}
           disabled={isSpinning || balance < caseData.price}
           className={`px-6 py-3 rounded-xl font-bold transition-all ${
             balance >= caseData.price && !isSpinning 
@@ -63,20 +85,18 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseData }) => {
         <div className="mt-2 p-4 bg-white/5 rounded-xl border border-white/10 animate-in fade-in zoom-in">
           <p className="text-xs text-secondary mb-1">YOU WON:</p>
           <div className="flex items-center gap-3">
-            <img src={result.image} className="w-16 h-16 rounded-lg object-cover border border-white/20" />
-            <p className="text-lg font-bold text-accent">{result.name}</p>
+            <img src={winningItem?.image} className="w-16 h-16 rounded-lg object-cover border border-white/20" />
+            <p className="text-lg font-bold text-accent">{winningItem?.name}</p>
           </div>
         </div>
       )}
 
-      {/* Визуальная рулетка появляется только в момент открытия */}
-      {isSpinning && (
+      {isSpinning && winningItem && (
         <div className="mt-4">
           <Roulette 
             items={caseData.items} 
-            onComplete={(item) => {
-              setResult(item);
-              setIsSpinning(false);
+            onComplete={() => {
+              // Мы уже знаем результат, просто ждем завершения анимации
             }} 
           />
         </div>
