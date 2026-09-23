@@ -39,6 +39,7 @@ test('opening saves before animation, survives reload, and sells once', async ({
   await expect(
     page.getByRole('button', { name: 'Sell', exact: true })
   ).toHaveCount(1);
+  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Sell', exact: true }).click();
   await expect(
     page.getByRole('button', { name: 'Sell', exact: true })
