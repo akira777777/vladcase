@@ -100,9 +100,11 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
+    console.log('handleSellOne called:', item.instanceId, item.id);
     playCashSound();
     const id = item.instanceId || item.id;
-    void sellItem(id);
+    console.log('sellItem calling id:', id);
+    void sellItem(id).then((r) => console.log('sellItem finished:', r));
   };
 
   const handleSellAll = () => {
