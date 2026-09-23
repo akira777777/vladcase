@@ -5,7 +5,6 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
-import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
 import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';
@@ -20,6 +19,7 @@ import {
   Trophy,
   X,
   ChevronDown,
+  Heart,
 } from 'lucide-react';
 
 // CS2 Rarity numeric weight for sorting
@@ -34,10 +34,11 @@ const rarityRank: Record<Rarity, number> = {
 };
 
 export default function InventoryPage() {
-  const { inventory, removeItem, sellItem, sellAll, isLoaded } = useInventory();
+  const { inventory, favoriteIds, toggleFavorite, removeItem, sellItem, sellAll, isLoaded } = useInventory();
   const [visibleCount, setVisibleCount] = useState(48);
 
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<
     'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'
@@ -56,13 +57,14 @@ export default function InventoryPage() {
 
   useEffect(() => {
     setVisibleCount(48);
-  }, [filterRarity, searchQuery, sortBy]);
+  }, [filterRarity, searchQuery, sortBy, favoritesOnly]);
 
   // Filter items
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return inventory.filter((item) => {
       // Rarity filter
+      if (favoritesOnly && !favoriteIds.includes(item.id)) return false;
       if (filterRarity !== 'ALL' && item.rarity !== filterRarity) {
         return false;
       }
@@ -74,7 +76,7 @@ export default function InventoryPage() {
       }
       return true;
     });
-  }, [inventory, filterRarity, searchQuery]);
+  }, [inventory, filterRarity, searchQuery, favoritesOnly, favoriteIds]);
 
   // Sort items
   const sortedItems = useMemo(() => {
@@ -96,6 +98,7 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
+    if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
     const id = item.instanceId || item.id;
     void sellItem(id);
@@ -103,14 +106,12 @@ export default function InventoryPage() {
 
   const handleSellAll = () => {
     if (inventory.length === 0) return;
-    if (
-      confirm(
+    if (preferences.confirmSales && !confirm(
         `Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`
       )
-    ) {
-      playCashSound();
-      void sellAll();
-    }
+    ) return;
+    playCashSound();
+    void sellAll();
   };
 
   return (
@@ -174,7 +175,7 @@ export default function InventoryPage() {
       </div>
 
       {/* Filter and Search Controls */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -235,14 +236,20 @@ export default function InventoryPage() {
           <ChevronDown className="w-4 h-4 text-text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
 
+          <button onClick={() => setFavoritesOnly((current) => !current)} aria-pressed={favoritesOnly} className={`rounded-xl border px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${favoritesOnly ? 'border-pink-400/40 bg-pink-500/10 text-pink-300' : 'bg-white/5 border-white/10 text-text-secondary hover:text-white'}`}>
+            <Heart className="w-4 h-4" fill={favoritesOnly ? 'currentColor' : 'none'} />
+            Favorites {favoriteIds.length > 0 && <span>({favoriteIds.length})</span>}
+          </button>
+        </div>
+
         {/* Quick Reset Filters */}
-        {(filterRarity !== 'ALL' || searchQuery !== '') && (
+        {(filterRarity !== 'ALL' || searchQuery !== '' || favoritesOnly) && (
           <button
             onClick={() => {
               setFilterRarity('ALL');
               setSearchQuery('');
+              setFavoritesOnly(false);
             }}
-            className="py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white text-sm font-medium border border-white/10 transition-colors flex items-center justify-center gap-1.5"
           >
             <X className="w-4 h-4" />
             <span>Clear Filters</span>
