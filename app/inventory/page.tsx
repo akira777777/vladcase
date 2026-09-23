@@ -100,11 +100,10 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
-    console.log('handleSellOne called:', item.instanceId, item.id);
+    if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
     const id = item.instanceId || item.id;
-    console.log('sellItem calling id:', id);
-    void sellItem(id).then((r) => console.log('sellItem finished:', r));
+    void sellItem(id);
   };
 
   const handleSellAll = () => {

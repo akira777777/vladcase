@@ -78,7 +78,6 @@ function useEconomyController() {
   }, [refresh]);
 
   const run = useCallback(async (command: Command): Promise<Result> => {
-    console.log('[run] command:', command, 'ready.current:', ready.current);
     if (!ready.current)
       return {
         ok: false,
