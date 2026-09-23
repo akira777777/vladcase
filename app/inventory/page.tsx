@@ -176,7 +176,7 @@ export default function InventoryPage() {
 
       {/* Filter and Search Controls */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Search */}
+          {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -240,22 +240,20 @@ export default function InventoryPage() {
             <Heart className="w-4 h-4" fill={favoritesOnly ? 'currentColor' : 'none'} />
             Favorites {favoriteIds.length > 0 && <span>({favoriteIds.length})</span>}
           </button>
+          {(filterRarity !== 'ALL' || searchQuery !== '' || favoritesOnly) && (
+            <button
+              onClick={() => {
+                setFilterRarity('ALL');
+                setSearchQuery('');
+                setFavoritesOnly(false);
+              }}
+              className="rounded-xl bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white text-sm font-medium border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <X className="w-4 h-4" />
+              <span>Clear Filters</span>
+            </button>
+          )}
         </div>
-
-        {/* Quick Reset Filters */}
-        {(filterRarity !== 'ALL' || searchQuery !== '' || favoritesOnly) && (
-          <button
-            onClick={() => {
-              setFilterRarity('ALL');
-              setSearchQuery('');
-              setFavoritesOnly(false);
-            }}
-          >
-            <X className="w-4 h-4" />
-            <span>Clear Filters</span>
-          </button>
-        )}
-      </div>
 
       {/* Inventory Grid */}
       {sortedItems.length === 0 ? (
@@ -359,7 +357,15 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Actions: Sell & Delete */}
-                <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-white/5">
+                <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-white/5">
+                  <button
+                    onClick={() => void toggleFavorite(item.id)}
+                    aria-label={`${favoriteIds.includes(item.id) ? 'Remove' : 'Add'} ${item.name} ${favoriteIds.includes(item.id) ? 'from' : 'to'} favorites`}
+                    aria-pressed={favoriteIds.includes(item.id)}
+                    className={`py-2 rounded-lg border flex items-center justify-center transition-colors ${favoriteIds.includes(item.id) ? 'border-pink-400/40 bg-pink-500/15 text-pink-300' : 'border-white/5 bg-white/5 text-text-muted hover:text-pink-300'}`}
+                  >
+                    <Heart className="w-3.5 h-3.5" fill={favoriteIds.includes(item.id) ? 'currentColor' : 'none'} />
+                  </button>
                   <button
                     disabled={!isLoaded}
                     onClick={() => handleSellOne(item)}
