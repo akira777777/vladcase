@@ -78,6 +78,7 @@ function useEconomyController() {
   }, [refresh]);
 
   const run = useCallback(async (command: Command): Promise<Result> => {
+    console.log('[run] command:', command, 'ready.current:', ready.current);
     if (!ready.current)
       return {
         ok: false,
@@ -86,12 +87,15 @@ function useEconomyController() {
       };
     try {
       return await navigator.locks.request(STORAGE_KEY, () => {
+        console.log('[run] lock acquired, calling commit for:', command);
         const change = commit(localStorage, command);
+        console.log('[run] commit returned:', change.result);
         setState(change.state);
         setError(change.result.ok ? null : change.result.message);
         return change.result;
       });
-    } catch {
+    } catch (e) {
+      console.error('[run] caught error:', e);
       const message =
         'Changes could not be saved. Nothing was charged or sold. Check available storage and retry.';
       setError(message);
