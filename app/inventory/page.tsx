@@ -5,6 +5,7 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
+import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
 import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';

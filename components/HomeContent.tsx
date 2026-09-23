@@ -86,11 +86,11 @@ export default function HomeContent({ hero }: { hero: React.ReactNode }) {
             </span>
             <History className="w-3.5 h-3.5 text-accent" />
             <span className="text-[11px] font-black uppercase tracking-wider text-white">
-              {history.length > 0 ? 'Live Unboxings' : 'Featured Drops'}
+              {history.length > 0 ? 'Recent Drops' : 'Featured Drops'}
             </span>
           </div>
           <span className="text-[10px] text-text-muted">
-            {history.length > 0 ? `${history.length} drops recorded` : 'Real-time drops ticker'}
+            {history.length > 0 ? `${history.length} local drops recorded` : 'Illustrative catalog drops'}
           </span>
         </div>
 
