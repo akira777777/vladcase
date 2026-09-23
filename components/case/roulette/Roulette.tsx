@@ -1,9 +1,11 @@
 'use client';
 
+import ItemImage from '@/components/ui/ItemImage';
+
 import React, { useEffect, useMemo, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { Item } from '@/types';
-import { getRarityColor, getRarityBadgeClass } from '@/lib/utils';
+import { getRarityColor } from '@/lib/utils';
 
 interface RouletteProps {
   items: Item[];
@@ -25,13 +27,18 @@ export const Roulette: React.FC<RouletteProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const controls = useAnimation();
+  const completionRef = useRef(onComplete);
+  completionRef.current = onComplete;
   const audioContextRef = useRef<AudioContext | null>(null);
 
   // Play synthetic mechanical tick sound
   const playTick = () => {
     try {
       if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AudioContextClass =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
         if (AudioContextClass) {
           audioContextRef.current = new AudioContextClass();
         }
@@ -85,27 +92,48 @@ export const Roulette: React.FC<RouletteProps> = ({
     }
 
     // Resume AudioContext on user interaction if suspended
-    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
+    if (
+      audioContextRef.current &&
+      audioContextRef.current.state === 'suspended'
+    ) {
+      void audioContextRef.current.resume().catch(() => {});
     }
 
+    let cancelled = false;
+    let completed = false;
+    let completionTimer: ReturnType<typeof setTimeout> | undefined;
     const containerWidth = containerRef.current?.offsetWidth || 800;
+    let currentWidth = containerWidth;
+    const completeSoon = () => {
+      if (cancelled || completed) return;
+      clearTimeout(completionTimer);
+      completionTimer = setTimeout(() => {
+        if (cancelled || completed) return;
+        completed = true;
+        completionRef.current();
+      }, 500);
+    };
     // Calculate position so TARGET_INDEX item is centered under the pointer
     // Random jitter between -45px and +45px within the 180px card
     const jitter = (Math.random() - 0.5) * 80;
-    const targetOffset = (TARGET_INDEX * TOTAL_ITEM_SPACE) + (ITEM_WIDTH / 2) - (containerWidth / 2) + jitter;
+    const targetOffset =
+      16 +
+      TARGET_INDEX * TOTAL_ITEM_SPACE +
+      ITEM_WIDTH / 2 -
+      containerWidth / 2 +
+      jitter;
 
-    controls.start({
-      x: -targetOffset,
-      transition: {
-        duration: 4.8,
-        ease: [0.15, 0.85, 0.25, 1], // CS2-style cubic-bezier deceleration
-      },
-    }).then(() => {
-      setTimeout(() => {
-        onComplete();
-      }, 500);
-    });
+    controls
+      .start({
+        x: -targetOffset,
+        transition: {
+          duration: 4.8,
+          ease: [0.15, 0.85, 0.25, 1], // CS2-style cubic-bezier deceleration
+        },
+      })
+      .then(() => {
+        completeSoon();
+      });
 
     // Play periodic audio ticks with increasing intervals as reel slows down
     const tickTimeouts: NodeJS.Timeout[] = [];
@@ -120,13 +148,38 @@ export const Roulette: React.FC<RouletteProps> = ({
       tickTimeouts.push(t);
     }
 
+    const observer = new ResizeObserver(() => {
+      const width = containerRef.current?.offsetWidth || containerWidth;
+      if (width !== currentWidth) {
+        currentWidth = width;
+        controls.stop();
+        controls.set({
+          x: -(
+            16 +
+            TARGET_INDEX * TOTAL_ITEM_SPACE +
+            ITEM_WIDTH / 2 -
+            width / 2 +
+            jitter
+          ),
+        });
+        tickTimeouts.forEach(clearTimeout);
+        completeSoon();
+      }
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
     return () => {
+      cancelled = true;
+      controls.stop();
+      observer.disconnect();
+      clearTimeout(completionTimer);
       tickTimeouts.forEach(clearTimeout);
+      void audioContextRef.current?.close().catch(() => {});
+      audioContextRef.current = null;
     };
-  }, [isSpinning, controls, onComplete]);
+  }, [isSpinning, controls]);
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="relative w-full h-52 bg-surface-dark border-y-2 border-white/10 overflow-hidden shadow-2xl rounded-2xl select-none"
     >
@@ -169,7 +222,10 @@ export const Roulette: React.FC<RouletteProps> = ({
               {/* Rarity ambient top glow */}
               <div
                 className="absolute top-0 inset-x-0 h-1"
-                style={{ backgroundColor: rarityColor, boxShadow: `0 0 10px ${rarityColor}` }}
+                style={{
+                  backgroundColor: rarityColor,
+                  boxShadow: `0 0 10px ${rarityColor}`,
+                }}
               />
 
               {/* Weapon type */}
@@ -179,14 +235,11 @@ export const Roulette: React.FC<RouletteProps> = ({
 
               {/* Weapon Image */}
               <div className="relative w-full h-24 flex items-center justify-center my-1">
-                <img
+                <ItemImage
+                  loading="eager"
                   src={item.image}
                   alt={item.name}
                   className="max-h-20 max-w-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)] group-hover:scale-105 transition-transform"
-                  onError={(e) => {
-                    // Fallback to stylized SVG placeholder if external URL fails
-                    (e.target as HTMLImageElement).src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='90' viewBox='0 0 160 90'><rect width='160' height='90' fill='%2311151C'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%238E96A3' font-family='sans-serif' font-size='11' font-weight='bold'>${encodeURIComponent(item.name)}</text></svg>`;
-                  }}
                 />
               </div>
 
@@ -195,7 +248,7 @@ export const Roulette: React.FC<RouletteProps> = ({
                 <p className="text-xs font-bold text-white truncate px-1">
                   {item.name}
                 </p>
-                <p 
+                <p
                   className="text-[10px] font-medium uppercase tracking-wider truncate"
                   style={{ color: rarityColor }}
                 >
@@ -204,7 +257,7 @@ export const Roulette: React.FC<RouletteProps> = ({
               </div>
 
               {/* Bottom rarity bar */}
-              <div 
+              <div
                 className="absolute bottom-0 inset-x-0 h-[2px]"
                 style={{ backgroundColor: rarityColor }}
               />

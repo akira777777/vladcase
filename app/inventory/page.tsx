@@ -1,47 +1,62 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import ItemImage from '@/components/ui/ItemImage';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
-import { useEconomy } from '@/hooks/useEconomy';
 import { Item, Rarity } from '@/types';
-import { formatCurrency, getRarityColor, getRarityBadgeClass } from '@/lib/utils';
-import { Package, Trash2, DollarSign, Search, ArrowUpDown, Filter, Sparkles } from 'lucide-react';
+import { formatCurrency, getRarityColor } from '@/lib/utils';
+import {
+  Package,
+  Trash2,
+  DollarSign,
+  Search,
+  ArrowUpDown,
+  Filter,
+  Sparkles,
+} from 'lucide-react';
+
+// CS2 Rarity numeric weight for sorting
+const rarityRank: Record<Rarity, number> = {
+  'Special Item': 7,
+  Covert: 6,
+  Classified: 5,
+  Restricted: 4,
+  'Mil-Spec': 3,
+  Industrial: 2,
+  Consumer: 1,
+};
 
 export default function InventoryPage() {
   const { inventory, removeItem, sellItem, sellAll, isLoaded } = useInventory();
-  const { addBalance } = useEconomy();
+  const [visibleCount, setVisibleCount] = useState(48);
 
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'>('newest');
+  const [sortBy, setSortBy] = useState<
+    'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'
+  >('newest');
 
   // Total inventory net worth calculation
   const totalValuation = useMemo(() => {
     return inventory.reduce((acc, item) => acc + (item.demoValue || 0), 0);
   }, [inventory]);
 
-  // CS2 Rarity numeric weight for sorting
-  const rarityRank: Record<Rarity, number> = {
-    'Special Item': 7,
-    'Covert': 6,
-    'Classified': 5,
-    'Restricted': 4,
-    'Mil-Spec': 3,
-    'Industrial': 2,
-    'Consumer': 1,
-  };
+  useEffect(() => {
+    setVisibleCount(48);
+  }, [filterRarity, searchQuery, sortBy]);
 
   // Filter items
   const filteredItems = useMemo(() => {
-    return inventory.filter(item => {
+    const query = searchQuery.trim().toLowerCase();
+    return inventory.filter((item) => {
       // Rarity filter
       if (filterRarity !== 'ALL' && item.rarity !== filterRarity) {
         return false;
       }
       // Search query
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
+      if (query !== '') {
         const matchesName = item.name.toLowerCase().includes(query);
         const matchesWeapon = item.weaponType.toLowerCase().includes(query);
         return matchesName || matchesWeapon;
@@ -76,7 +91,11 @@ export default function InventoryPage() {
 
   const handleSellAll = () => {
     if (inventory.length === 0) return;
-    if (confirm(`Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`)) {
+    if (
+      confirm(
+        `Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`
+      )
+    ) {
       sellAll();
     }
   };
@@ -108,13 +127,14 @@ export default function InventoryPage() {
               {isLoaded ? formatCurrency(totalValuation) : '$0.00'}
             </p>
             <p className="text-[10px] text-text-secondary">
-              {inventory.length} Total {inventory.length === 1 ? 'Item' : 'Items'}
+              {inventory.length} Total{' '}
+              {inventory.length === 1 ? 'Item' : 'Items'}
             </p>
           </div>
 
           <button
             onClick={handleSellAll}
-            disabled={inventory.length === 0}
+            disabled={!isLoaded || inventory.length === 0}
             className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
               inventory.length > 0
                 ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:scale-105 active:scale-95'
@@ -134,6 +154,7 @@ export default function InventoryPage() {
           <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            aria-label="Search inventory"
             placeholder="Search by weapon or skin..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -145,6 +166,7 @@ export default function InventoryPage() {
         <div className="relative">
           <Filter className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <select
+            aria-label="Filter rarity"
             value={filterRarity}
             onChange={(e) => setFilterRarity(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-white/10 text-white text-sm focus:border-accent focus:outline-none appearance-none cursor-pointer"
@@ -164,8 +186,9 @@ export default function InventoryPage() {
         <div className="relative">
           <ArrowUpDown className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
           <select
+            aria-label="Sort inventory"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-white/10 text-white text-sm focus:border-accent focus:outline-none appearance-none cursor-pointer"
           >
             <option value="newest">Recently Unboxed</option>
@@ -195,7 +218,9 @@ export default function InventoryPage() {
         <div className="text-center py-24 bg-surface-dark/40 rounded-3xl border border-dashed border-white/15">
           <Package className="w-14 h-14 text-text-muted mx-auto mb-4 opacity-40" />
           <h3 className="text-xl font-bold text-white mb-1">
-            {inventory.length === 0 ? 'No items in your inventory' : 'No items match your filters'}
+            {inventory.length === 0
+              ? 'No items in your inventory'
+              : 'No items match your filters'}
           </h3>
           <p className="text-xs text-text-secondary max-w-sm mx-auto mb-6">
             {inventory.length === 0
@@ -224,7 +249,7 @@ export default function InventoryPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {sortedItems.map((item, idx) => {
+          {sortedItems.slice(0, visibleCount).map((item, idx) => {
             const rarityColor = getRarityColor(item.rarity);
             const instanceKey = item.instanceId || `${item.id}-${idx}`;
 
@@ -256,19 +281,19 @@ export default function InventoryPage() {
 
                   {/* Weapon Image */}
                   <div className="relative w-full h-28 flex items-center justify-center my-2 bg-surface-dark/60 rounded-xl overflow-hidden p-1">
-                    <img
+                    <ItemImage
                       src={item.image}
                       alt={item.name}
                       className="max-h-24 max-w-full object-contain group-hover:scale-105 transition-transform duration-300 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='90' viewBox='0 0 160 90'><rect width='160' height='90' fill='%2311151C'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%238E96A3' font-family='sans-serif' font-size='10' font-weight='bold'>${encodeURIComponent(item.name)}</text></svg>`;
-                      }}
                     />
                   </div>
 
                   {/* Skin Name & Valuation */}
                   <div className="mb-3">
-                    <h4 className="text-xs font-bold text-white truncate" title={item.name}>
+                    <h4
+                      className="text-xs font-bold text-white truncate"
+                      title={item.name}
+                    >
                       {item.name}
                     </h4>
                     <p className="text-sm font-black text-emerald-400 font-display mt-0.5">
@@ -280,6 +305,7 @@ export default function InventoryPage() {
                 {/* Actions: Sell & Delete */}
                 <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-white/5">
                   <button
+                    disabled={!isLoaded}
                     onClick={() => handleSellOne(item)}
                     title={`Sell for ${formatCurrency(item.demoValue)}`}
                     className="col-span-3 py-2 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95"
@@ -289,7 +315,11 @@ export default function InventoryPage() {
                   </button>
 
                   <button
-                    onClick={() => removeItem(item.instanceId || item.id)}
+                    disabled={!isLoaded}
+                    onClick={() => {
+                      if (confirm(`Remove ${item.name} without selling it?`))
+                        void removeItem(item.instanceId!);
+                    }}
                     title="Remove from inventory"
                     className="col-span-1 py-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-text-muted hover:text-red-400 border border-white/5 flex items-center justify-center transition-colors"
                   >
@@ -300,6 +330,14 @@ export default function InventoryPage() {
             );
           })}
         </div>
+      )}
+      {visibleCount < sortedItems.length && (
+        <button
+          className="rounded-xl border border-white/20 px-6 py-3"
+          onClick={() => setVisibleCount((count) => count + 48)}
+        >
+          Load more ({sortedItems.length - visibleCount} remaining)
+        </button>
       )}
     </div>
   );

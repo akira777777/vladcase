@@ -1,14 +1,31 @@
 'use client';
 
-import React, { useState } from 'react';
-import { openCase } from '@/lib/caseLogic';
+import ItemImage from '@/components/ui/ItemImage';
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
+import Dialog from '@/components/ui/Dialog';
 import { useEconomy } from '@/hooks/useEconomy';
 import { useInventory } from '@/hooks/useInventory';
 import { Case, Item } from '@/types';
-import Roulette from './roulette/Roulette';
-import WinScreen from './WinScreen';
-import { motion, AnimatePresence } from 'framer-motion';
-import { formatCurrency, getRarityColor, getRarityBadgeClass } from '@/lib/utils';
+const Roulette = dynamic(() => import('./roulette/Roulette'), {
+  loading: () => (
+    <div className="h-52" role="status">
+      Loading reveal…
+    </div>
+  ),
+});
+const WinScreen = dynamic(() => import('./WinScreen'), {
+  loading: () => (
+    <div
+      role="status"
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+    >
+      Loading result…
+    </div>
+  ),
+});
+import { formatCurrency, getRarityColor } from '@/lib/utils';
 import { Sparkles, Zap, X, Eye } from 'lucide-react';
 
 interface CaseCardProps {
@@ -17,8 +34,19 @@ interface CaseCardProps {
 }
 
 export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
-  const { balance, deductBalance, addXp, addBalance } = useEconomy();
-  const { addItem, removeItem } = useInventory();
+  const { balance, openCase, finishOpening, isLoaded, activeOpening } =
+    useEconomy();
+  const { sellItem } = useInventory();
+  const ownsOpening = useRef(false);
+  const pendingOpening = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (ownsOpening.current && !pendingOpening.current) finishOpening();
+    };
+  }, [finishOpening]);
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [winningItem, setWinningItem] = useState<Item | null>(null);
@@ -26,51 +54,50 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
   const [showWinScreen, setShowWinScreen] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  const canAfford = balance >= caseData.price;
+  const canAfford = isLoaded && balance >= caseData.price;
+  const closeOpening = useCallback(() => {
+    setShowWinScreen(false);
+    setShowRouletteModal(false);
+    setIsSpinning(false);
+    ownsOpening.current = false;
+    finishOpening();
+  }, [finishOpening]);
 
-  // Standard interactive spin with the 5s roulette animation
-  const handleStartSpin = () => {
-    if (!canAfford || isSpinning) return;
-
-    const deducted = deductBalance(caseData.price);
-    if (!deducted) return;
-
-    const winner = openCase(caseData);
-    setWinningItem(winner);
-    setIsSpinning(true);
-    setShowRouletteModal(true);
+  const startOpening = async (quick: boolean) => {
+    if (!canAfford || ownsOpening.current) return;
+    ownsOpening.current = true;
+    pendingOpening.current = true;
+    const result = await openCase(caseData);
+    pendingOpening.current = false;
+    if (!mounted.current) {
+      ownsOpening.current = false;
+      if (result.ok) finishOpening();
+      return;
+    }
+    if (!result.ok || !result.item) {
+      ownsOpening.current = false;
+      return;
+    }
+    setWinningItem(result.item);
+    onSuccess?.(result.item);
+    if (quick || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+      setShowWinScreen(true);
+    else {
+      setIsSpinning(true);
+      setShowRouletteModal(true);
+    }
   };
-
-  // Instant open for quick gameplay
-  const handleQuickOpen = () => {
-    if (!canAfford || isSpinning) return;
-
-    const deducted = deductBalance(caseData.price);
-    if (!deducted) return;
-
-    const winner = openCase(caseData);
-    setWinningItem(winner);
-    addXp(50);
-    addItem(winner, { id: caseData.id, name: caseData.name });
-    if (onSuccess) onSuccess(winner);
-    setShowWinScreen(true);
-  };
-
-  const handleRouletteComplete = () => {
-    if (!winningItem) return;
+  const handleStartSpin = () => void startOpening(false);
+  const handleQuickOpen = () => void startOpening(true);
+  const handleRouletteComplete = useCallback(() => {
     setIsSpinning(false);
     setShowRouletteModal(false);
-    addXp(50);
-    addItem(winningItem, { id: caseData.id, name: caseData.name });
-    if (onSuccess) onSuccess(winningItem);
     setShowWinScreen(true);
-  };
-
-  const handleSellFromWin = (item: Item) => {
-    if (item.instanceId) {
-      removeItem(item.instanceId);
-    }
-    addBalance(item.demoValue);
+  }, []);
+  const handleSellFromWin = async (item: Item) => {
+    const result = await sellItem(item.instanceId!);
+    if (result.ok) closeOpening();
+    return result;
   };
 
   return (
@@ -83,6 +110,8 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
               {caseData.category}
             </span>
             <button
+              disabled={activeOpening}
+              aria-label={`View ${caseData.name} contents`}
               onClick={() => setShowPreviewModal(true)}
               className="text-text-muted hover:text-white p-1 rounded-md transition-colors"
               title="View contained items"
@@ -94,13 +123,10 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
           {/* Case Image */}
           <div className="relative w-full h-44 flex items-center justify-center mb-4 overflow-hidden rounded-xl bg-surface-dark/50">
             <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent z-0" />
-            <img
+            <ItemImage
               src={caseData.image}
               alt={caseData.name}
               className="max-h-36 max-w-full object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] group-hover:scale-105 transition-transform duration-300 z-10"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'><rect width='200' height='150' fill='%2311151C'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%238E96A3' font-family='sans-serif' font-size='12' font-weight='bold'>${encodeURIComponent(caseData.name)}</text></svg>`;
-              }}
             />
           </div>
 
@@ -118,7 +144,9 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
 
           {/* Item Rarity preview dots */}
           <div className="flex items-center gap-1.5 mb-4 py-1.5 px-3 rounded-lg bg-surface-dark/40 border border-white/5">
-            <span className="text-[10px] text-text-muted uppercase tracking-wider mr-1">Contains:</span>
+            <span className="text-[10px] text-text-muted uppercase tracking-wider mr-1">
+              Contains:
+            </span>
             <div className="flex items-center gap-1.5 overflow-hidden">
               {caseData.items.map((item, idx) => (
                 <span
@@ -144,7 +172,7 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
           <div className="grid grid-cols-5 gap-2">
             <button
               onClick={handleStartSpin}
-              disabled={!canAfford || isSpinning}
+              disabled={!canAfford || activeOpening}
               className={`col-span-4 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
                 canAfford && !isSpinning
                   ? 'bg-accent hover:bg-accent-hover text-surface-dark shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-[1.02]'
@@ -152,12 +180,16 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
               }`}
             >
               <Sparkles className="w-4 h-4" />
-              {isSpinning ? 'Opening...' : canAfford ? 'Open Case' : 'Insufficient Funds'}
+              {isSpinning
+                ? 'Opening...'
+                : canAfford
+                  ? 'Open Case'
+                  : 'Insufficient Funds'}
             </button>
 
             <button
               onClick={handleQuickOpen}
-              disabled={!canAfford || isSpinning}
+              disabled={!canAfford || activeOpening}
               title="Instant Open"
               className={`col-span-1 flex items-center justify-center rounded-xl transition-all ${
                 canAfford && !isSpinning
@@ -172,15 +204,10 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
       </div>
 
       {/* Roulette Modal */}
-      <AnimatePresence>
+      <>
         {showRouletteModal && winningItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative max-w-4xl w-full bg-surface/95 border border-white/15 rounded-3xl p-6 md:p-8 shadow-2xl text-center"
-            >
+          <Dialog label={`Opening ${caseData.name}`} onClose={closeOpening}>
+            <div className="relative max-w-4xl w-full bg-surface/95 border border-white/15 rounded-3xl p-6 md:p-8 shadow-2xl text-center">
               <div className="mb-6 flex items-center justify-between">
                 <div>
                   <h3 className="text-2xl font-bold font-display text-white">
@@ -202,31 +229,37 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
                 />
               </div>
 
+              <button onClick={closeOpening} className="underline text-sm">
+                Close reveal — item saved
+              </button>
               <p className="text-xs text-text-muted italic">
                 Good luck! The reel is stopping shortly...
               </p>
-            </motion.div>
-          </div>
+            </div>
+          </Dialog>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Contained Items Preview Modal */}
-      <AnimatePresence>
+      <>
         {showPreviewModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative max-w-2xl w-full bg-surface border border-white/15 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[85vh] flex flex-col"
-            >
+          <Dialog
+            label={`${caseData.name} contents`}
+            onClose={() => setShowPreviewModal(false)}
+          >
+            <div className="relative max-w-2xl w-full bg-surface border border-white/15 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[85vh] flex flex-col">
               <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4">
                 <div>
-                  <h3 className="text-xl font-bold text-white">{caseData.name} Contents</h3>
-                  <p className="text-xs text-text-secondary">All possible skins in this case</p>
+                  <h3 className="text-xl font-bold text-white">
+                    {caseData.name} Contents
+                  </h3>
+                  <p className="text-xs text-text-secondary">
+                    All possible skins in this case
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowPreviewModal(false)}
+                  aria-label="Close contents"
                   className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white"
                 >
                   <X className="w-5 h-5" />
@@ -242,14 +275,16 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
                       className="flex items-center gap-3 p-3 rounded-xl bg-surface-dark/60 border border-white/5"
                     >
                       <div className="w-14 h-12 flex-shrink-0 flex items-center justify-center bg-surface rounded-lg p-1">
-                        <img
+                        <ItemImage
                           src={item.image}
                           alt={item.name}
                           className="max-h-10 max-w-full object-contain"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-white truncate">{item.name}</p>
+                        <p className="text-xs font-bold text-white truncate">
+                          {item.name}
+                        </p>
                         <p
                           className="text-[10px] font-semibold uppercase tracking-wider"
                           style={{ color: rarityColor }}
@@ -273,23 +308,26 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
                   Close
                 </button>
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </Dialog>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Win Screen Modal */}
-      <AnimatePresence>
+      <>
         {showWinScreen && winningItem && (
           <WinScreen
             item={winningItem}
-            onClose={() => setShowWinScreen(false)}
+            onClose={closeOpening}
             onSell={handleSellFromWin}
-            onOpenAgain={handleStartSpin}
+            onOpenAgain={() => {
+              closeOpening();
+              handleStartSpin();
+            }}
             canOpenAgain={canAfford}
           />
         )}
-      </AnimatePresence>
+      </>
     </>
   );
 };

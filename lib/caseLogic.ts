@@ -1,36 +1,38 @@
-import { Case, Item } from "../types";
-
-/**
- * Opens a case and returns the winning item based on weighted drop chances.
- * Also assigns a unique instanceId and unboxedAt timestamp.
- * @param caseData The case being opened.
- * @returns The winning Item object.
- */
-export function openCase(caseData: Case): Item {
-  const items = caseData.items;
-  if (!items || items.length === 0) {
-    throw new Error("Case contains no items");
+import type { Case, Item } from '../types';
+export interface OpeningEnvironment {
+  random: () => number;
+  now: () => number;
+  id: () => string;
+}
+export function openCase(
+  caseData: Case,
+  env: OpeningEnvironment = {
+    random: Math.random,
+    now: Date.now,
+    id: () => crypto.randomUUID(),
   }
-  
-  const totalWeight = items.reduce((acc, item) => acc + (item.dropChance || 1), 0);
-  const randomNum = Math.random() * totalWeight;
-  
-  let currentSum = 0;
-  for (const item of items) {
-    currentSum += (item.dropChance || 1);
-    if (randomNum <= currentSum) {
-      return {
-        ...item,
-        instanceId: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        unboxedAt: Date.now(),
-      };
+): Item {
+  const { items } = caseData;
+  if (
+    !items.length ||
+    items.some((i) => !Number.isFinite(i.dropChance) || i.dropChance < 0)
+  )
+    throw new Error('Invalid case weights');
+  const total = items.reduce((sum, item) => sum + item.dropChance, 0);
+  if (!Number.isFinite(total) || total <= 0)
+    throw new Error('Case has no eligible items');
+  const random = env.random();
+  if (!Number.isFinite(random) || random < 0 || random >= 1)
+    throw new Error('Invalid random sample');
+  let remaining = random * total;
+  const eligible = items.filter((item) => item.dropChance > 0);
+  let winner = eligible[eligible.length - 1];
+  for (const item of eligible) {
+    if (remaining < item.dropChance) {
+      winner = item;
+      break;
     }
+    remaining -= item.dropChance;
   }
-
-  const lastItem = items[items.length - 1];
-  return {
-    ...lastItem,
-    instanceId: `${lastItem.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    unboxedAt: Date.now(),
-  };
+  return { ...winner, instanceId: env.id(), unboxedAt: env.now() };
 }

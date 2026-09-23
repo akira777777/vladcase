@@ -1,16 +1,23 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import ItemImage from '@/components/ui/ItemImage';
+
+import React, { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Item } from '@/types';
-import { formatCurrency, getRarityColor, getRarityBadgeClass } from '@/lib/utils';
-import confetti from 'canvas-confetti';
+import {
+  formatCurrency,
+  getRarityColor,
+  getRarityBadgeClass,
+} from '@/lib/utils';
+import Dialog from '@/components/ui/Dialog';
+import type { Result } from '@/lib/economy';
 import { DollarSign, Archive, RefreshCw, X } from 'lucide-react';
 
 interface WinScreenProps {
   item: Item;
   onClose: () => void;
-  onSell?: (item: Item) => void;
+  onSell?: (item: Item) => Promise<Result>;
   onOpenAgain?: () => void;
   canOpenAgain?: boolean;
 }
@@ -23,34 +30,43 @@ export const WinScreen: React.FC<WinScreenProps> = ({
   canOpenAgain = false,
 }) => {
   const rarityColor = getRarityColor(item.rarity);
-  const isHighTier = item.rarity === 'Covert' || item.rarity === 'Special Item' || item.rarity === 'Classified';
+  const isHighTier =
+    item.rarity === 'Covert' ||
+    item.rarity === 'Special Item' ||
+    item.rarity === 'Classified';
 
+  const reducedMotion = useReducedMotion();
+  const [selling, setSelling] = useState(false);
+  const [saleError, setSaleError] = useState<string | null>(null);
   useEffect(() => {
-    // Fire celebratory confetti for covert/special or any win
-    try {
-      if (isHighTier) {
-        confetti({
-          particleCount: 100,
-          spread: 80,
+    if (reducedMotion) return;
+    let cancelled = false;
+    let reset: (() => void) | undefined;
+    void import('canvas-confetti')
+      .then(({ default: confetti }) => {
+        if (cancelled) return;
+        reset = confetti.reset;
+        void confetti({
+          particleCount: isHighTier ? 100 : 40,
+          spread: 70,
           origin: { y: 0.6 },
-          colors: [rarityColor, '#FFD700', '#22D3EE', '#FFFFFF'],
+          colors: [rarityColor, '#FFD700', '#22D3EE'],
+          disableForReducedMotion: true,
         });
-      } else {
-        confetti({
-          particleCount: 40,
-          spread: 60,
-          origin: { y: 0.65 },
-        });
-      }
-    } catch {
-      // ignore if confetti fails
-    }
-  }, [isHighTier, rarityColor]);
+      })
+      .catch(() => {
+        /* Celebration is optional; the saved result remains available. */
+      });
+    return () => {
+      cancelled = true;
+      reset?.();
+    };
+  }, [isHighTier, rarityColor, reducedMotion]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+    <Dialog label={`Won ${item.name}`} onClose={onClose}>
       <motion.div
-        initial={{ opacity: 0, scale: 0.85, y: 30 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.85, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
@@ -63,6 +79,7 @@ export const WinScreen: React.FC<WinScreenProps> = ({
         {/* Close button top right */}
         <button
           onClick={onClose}
+          aria-label="Close result"
           className="absolute top-5 right-5 p-2 rounded-full bg-white/5 hover:bg-white/15 text-text-secondary hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
@@ -85,13 +102,11 @@ export const WinScreen: React.FC<WinScreenProps> = ({
             className="absolute inset-0 rounded-full blur-2xl opacity-40 animate-pulse-subtle"
             style={{ backgroundColor: rarityColor }}
           />
-          <img
+          <ItemImage
+            loading="eager"
             src={item.image}
             alt={item.name}
             className="relative z-10 w-72 h-44 object-contain mx-auto filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='170' viewBox='0 0 280 170'><rect width='280' height='170' fill='%2311151C'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%238E96A3' font-family='sans-serif' font-size='14' font-weight='bold'>${encodeURIComponent(item.name)}</text></svg>`;
-            }}
           />
         </div>
 
@@ -113,12 +128,24 @@ export const WinScreen: React.FC<WinScreenProps> = ({
         </div>
 
         {/* Actions */}
+        {saleError && (
+          <p role="alert" className="text-red-300 mb-4">
+            {saleError}
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           {onSell ? (
             <button
-              onClick={() => {
-                onSell(item);
-                onClose();
+              disabled={selling}
+              onClick={async () => {
+                if (selling) return;
+                setSelling(true);
+                try {
+                  const result = await onSell(item);
+                  if (!result.ok) setSaleError(result.message);
+                } finally {
+                  setSelling(false);
+                }
               }}
               className="flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold text-sm bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 transition-all hover:scale-[1.02]"
             >
@@ -138,7 +165,6 @@ export const WinScreen: React.FC<WinScreenProps> = ({
           {canOpenAgain && onOpenAgain ? (
             <button
               onClick={() => {
-                onClose();
                 onOpenAgain();
               }}
               className="sm:col-span-2 flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-medium text-xs bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white border border-white/10 transition-all"
@@ -149,7 +175,7 @@ export const WinScreen: React.FC<WinScreenProps> = ({
           ) : null}
         </div>
       </motion.div>
-    </div>
+    </Dialog>
   );
 };
 

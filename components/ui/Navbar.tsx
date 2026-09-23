@@ -20,7 +20,7 @@ export const Navbar = () => {
             <span className="w-8 h-8 rounded-lg bg-accent/20 border border-accent/40 flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
               <Sparkles className="w-4 h-4" />
             </span>
-            <span className="text-xl font-display font-black tracking-tight text-white">
+            <span className="text-base sm:text-xl font-display font-black tracking-tight text-white">
               VLAD<span className="text-accent">CASE</span>
             </span>
           </Link>
@@ -48,9 +48,9 @@ export const Navbar = () => {
         </div>
 
         {/* User Stats & Balance */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-1 sm:gap-4">
           {/* Level Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-text-secondary">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-text-secondary">
             <Shield className="w-3.5 h-3.5 text-accent" />
             <span>LVL {isLoaded ? level : 1}</span>
           </div>
@@ -67,7 +67,9 @@ export const Navbar = () => {
             </div>
 
             <button
-              onClick={() => addBalance(500)}
+              disabled={!isLoaded}
+              aria-label="Add $500 free credits"
+              onClick={() => void addBalance(500)}
               title="Add $500 for testing"
               className="p-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition-all hover:scale-105 active:scale-95"
             >

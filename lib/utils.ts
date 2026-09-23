@@ -1,12 +1,14 @@
 import { Rarity } from "../types";
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
+const currencyFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  });
+
+export function formatCurrency(amount: number): string {
+  return currencyFormatter.format(amount);
 }
 
 export function getRarityColor(rarity: Rarity): string {
@@ -49,18 +51,4 @@ export function getRarityBadgeClass(rarity: Rarity): string {
     default:
       return 'bg-white/10 text-white border-white/20';
   }
-}
-
-export function getRandomWeighted(items: { id: string; dropChance: number }[], totalWeight: number): string {
-  const random = Math.random() * totalWeight;
-  let currentSum = 0;
-
-  for (const item of items) {
-    currentSum += item.dropChance;
-    if (random <= currentSum) {
-      return item.id;
-    }
-  }
-
-  return items[items.length - 1].id;
 }
