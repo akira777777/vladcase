@@ -226,7 +226,13 @@ function migrateV1(value: unknown): Snapshot {
 
 export function readSnapshot(storage: Pick<Storage, 'getItem'>): Snapshot {
   const saved = storage.getItem(STORAGE_KEY);
-  if (saved !== null) return validateSnapshot(JSON.parse(saved));
+  if (saved !== null) {
+    const parsed = JSON.parse(saved);
+    if (parsed && typeof parsed === 'object' && (parsed as { version?: unknown }).version === 1) {
+      return migrateV1(parsed);
+    }
+    return validateSnapshot(parsed);
+  }
   const legacy = storage.getItem(LEGACY_STORAGE_KEY);
   if (legacy !== null) return migrateV1(JSON.parse(legacy));
   const read = (key: string, fallback: unknown): unknown => {

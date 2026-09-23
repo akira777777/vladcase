@@ -5,7 +5,6 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
-import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
 import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';
@@ -36,7 +35,6 @@ const rarityRank: Record<Rarity, number> = {
 
 export default function InventoryPage() {
   const { inventory, favoriteIds, toggleFavorite, removeItem, sellItem, sellAll, isLoaded } = useInventory();
-  const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
 
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
@@ -100,7 +98,6 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
-    if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
     const id = item.instanceId || item.id;
     void sellItem(id);
@@ -108,12 +105,14 @@ export default function InventoryPage() {
 
   const handleSellAll = () => {
     if (inventory.length === 0) return;
-    if (preferences.confirmSales && !confirm(
+    if (
+      confirm(
         `Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`
       )
-    ) return;
-    playCashSound();
-    void sellAll();
+    ) {
+      playCashSound();
+      void sellAll();
+    }
   };
 
   return (
