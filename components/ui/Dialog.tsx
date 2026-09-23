@@ -21,6 +21,16 @@ export default function Dialog({
     const overflow = document.body.style.overflow;
     dialog.showModal();
     document.body.style.overflow = 'hidden';
+
+    const focusable = dialog.querySelector<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable) {
+      focusable.focus();
+    } else {
+      dialog.focus();
+    }
+
     return () => {
       dialog.close();
       document.body.style.overflow = overflow;
@@ -30,7 +40,37 @@ export default function Dialog({
   return (
     <dialog
       ref={ref}
+      tabIndex={-1}
       aria-label={label}
+      onKeyDown={(e) => {
+        if (e.key === 'Tab') {
+          const dialog = ref.current;
+          if (!dialog) return;
+          const focusable = Array.from(
+            dialog.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          );
+          if (focusable.length === 0) {
+            e.preventDefault();
+            dialog.focus();
+            return;
+          }
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || !dialog.contains(document.activeElement)) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last || !dialog.contains(document.activeElement)) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault();
         close.current();

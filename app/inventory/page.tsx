@@ -100,6 +100,7 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
+    if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
     const id = item.instanceId || item.id;
     void sellItem(id);
