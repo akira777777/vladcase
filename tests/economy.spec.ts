@@ -301,6 +301,8 @@ test('simultaneous sales in two tabs credit an instance once', async ({
   await expect(
     second.getByRole('button', { name: 'Sell', exact: true })
   ).toBeVisible();
+  page.once('dialog', (dialog) => dialog.accept());
+  second.once('dialog', (dialog) => dialog.accept());
   await Promise.all(
     [page, second].map((tab) =>
       tab

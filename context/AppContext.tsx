@@ -86,15 +86,12 @@ function useEconomyController() {
       };
     try {
       return await navigator.locks.request(STORAGE_KEY, () => {
-        console.log('[run] lock acquired, calling commit for:', command);
         const change = commit(localStorage, command);
-        console.log('[run] commit returned:', change.result);
         setState(change.state);
         setError(change.result.ok ? null : change.result.message);
         return change.result;
       });
-    } catch (e) {
-      console.error('[run] caught error:', e);
+    } catch {
       const message =
         'Changes could not be saved. Nothing was charged or sold. Check available storage and retry.';
       setError(message);
