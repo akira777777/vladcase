@@ -46,17 +46,20 @@ function useEconomyController() {
         );
       await navigator.locks.request(STORAGE_KEY, () => {
         const saved = readSnapshot(localStorage);
-        const v1 = {
-          version: 1,
-          balanceCents: saved.balanceCents,
-          xp: saved.xp,
-          inventory: saved.inventory,
-          history: saved.history,
-        };
-        if (localStorage.getItem(LEGACY_STORAGE_KEY) === null) {
+        if (
+          localStorage.getItem(STORAGE_KEY) === null &&
+          localStorage.getItem(LEGACY_STORAGE_KEY) === null
+        ) {
+          const v1 = {
+            version: 1,
+            balanceCents: saved.balanceCents,
+            xp: saved.xp,
+            inventory: saved.inventory,
+            history: saved.history,
+          };
           localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(v1));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         setState(saved);
       });
       ready.current = true;

@@ -9,7 +9,14 @@ import CaseCard from '@/components/case/CaseCard';
 import ItemImage from '@/components/ui/ItemImage';
 
 export function generateStaticParams() { return CASES.map((caseItem) => ({ caseId: caseItem.id })); }
-export function generateMetadata({ params }: { params: Promise<{ caseId: string }> }) { const id = (typeof params === 'object' ? params : null) as unknown as { caseId?: string }; const caseItem = CASES.find((entry) => entry.id === id?.caseId); return { title: caseItem ? `${caseItem.name} | VLADCASE` : 'Case | VLADCASE', description: caseItem?.description ?? 'Explore VLADCASE simulated case odds.' }; }
+export async function generateMetadata({ params }: { params: Promise<{ caseId: string }> }) {
+  const { caseId } = await params;
+  const caseItem = CASES.find((entry) => entry.id === caseId);
+  return {
+    title: caseItem ? caseItem.name : 'Case',
+    description: caseItem?.description ?? 'Explore VLADCASE simulated case odds.',
+  };
+}
 export default async function CasePage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = await params; const caseItem = CASES.find((entry) => entry.id === caseId); if (!caseItem) notFound(); const odds = caseOdds(caseItem); const tiers = rarityOdds(caseItem); const values = caseItem.items.map((item) => item.demoValue);
   return <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-10"><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><Link href="/" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-white"><ArrowLeft className="h-4 w-4" />Back to cases</Link><p className="mt-6 text-xs font-bold uppercase tracking-widest text-accent">{caseItem.category} case</p><h1 className="mt-2 text-4xl sm:text-6xl font-black font-display text-white">{caseItem.name}</h1><p className="mt-2 max-w-2xl text-sm text-text-secondary">{caseItem.description}</p></div><div className="flex items-center gap-2 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-accent"><ShieldCheck className="h-5 w-5" />{formatCurrency(caseItem.price)} per open</div></div>

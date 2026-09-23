@@ -20,14 +20,6 @@ export default function SettingsPage() {
   const importProgress = async (file: File) => {
     try {
       const value = validateSnapshot(JSON.parse(await file.text()));
-      const v1 = {
-        version: 1,
-        balanceCents: value.balanceCents,
-        xp: value.xp,
-        inventory: value.inventory,
-        history: value.history,
-      };
-      localStorage.setItem('vladcase_state_v1', JSON.stringify(v1));
       localStorage.setItem('vladcase_state_v2', JSON.stringify(value));
       setMessage('Progress imported. Reloading…');
       window.location.reload();
