@@ -44,7 +44,6 @@ export default function ContractsPage() {
   const { inventory } = useInventory();
   const { isLoaded } = useEconomy();
   const { tradeUpContract, addBalance } = useApp();
-  const { isLoaded } = useEconomy();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSigning, setIsSigning] = useState(false);
