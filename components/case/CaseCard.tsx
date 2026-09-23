@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import Dialog from '@/components/ui/Dialog';
 import { useEconomy } from '@/hooks/useEconomy';
 import { useInventory } from '@/hooks/useInventory';
+import { usePreferences } from '@/hooks/usePreferences';
 import { Case, Item } from '@/types';
 const Roulette = dynamic(() => import('./roulette/Roulette'), {
   loading: () => (
@@ -34,9 +35,10 @@ interface CaseCardProps {
 }
 
 export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
-  const { balance, openCase, finishOpening, isLoaded, activeOpening } =
+  const { balance, openCase, openMany, finishOpening, isLoaded, activeOpening } =
     useEconomy();
   const { sellItem } = useInventory();
+  const { preferences } = usePreferences();
   const ownsOpening = useRef(false);
   const pendingOpening = useRef(false);
   const mounted = useRef(true);
@@ -53,11 +55,15 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
   const [showRouletteModal, setShowRouletteModal] = useState(false);
   const [showWinScreen, setShowWinScreen] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [batchItems, setBatchItems] = useState<Item[]>([]);
+  const [showBatchResults, setShowBatchResults] = useState(false);
 
   const canAfford = isLoaded && balance >= caseData.price;
   const closeOpening = useCallback(() => {
     setShowWinScreen(false);
     setShowRouletteModal(false);
+    setShowBatchResults(false);
+    setBatchItems([]);
     setIsSpinning(false);
     ownsOpening.current = false;
     finishOpening();
@@ -80,7 +86,11 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
     }
     setWinningItem(result.item);
     onSuccess?.(result.item);
-    if (quick || window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    if (
+      quick ||
+      preferences.revealMode === 'instant' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
       setShowWinScreen(true);
     else {
       setIsSpinning(true);
@@ -89,6 +99,16 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
   };
   const handleStartSpin = () => void startOpening(false);
   const handleQuickOpen = () => void startOpening(true);
+  const handleBatchOpen = async (count: 3 | 5) => {
+    if (ownsOpening.current || !isLoaded || balance < caseData.price * count) return;
+    ownsOpening.current = true;
+    const result = await openMany(caseData, count);
+    ownsOpening.current = false;
+    if (result.ok && result.items) {
+      setBatchItems(result.items);
+      setShowBatchResults(true);
+    }
+  };
   const handleRouletteComplete = useCallback(() => {
     setIsSpinning(false);
     setShowRouletteModal(false);
@@ -208,39 +228,24 @@ export const CaseCard: React.FC<CaseCardProps> = ({ caseData, onSuccess }) => {
             </span>
           </div>
 
-          <div className="grid grid-cols-5 gap-2">
-            <button
-              onClick={handleStartSpin}
-              disabled={!canAfford || activeOpening}
-              className={`col-span-4 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                canAfford && !isSpinning
-                  ? 'bg-accent hover:bg-accent-hover text-surface-dark shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-[1.02] active:scale-95'
-                  : 'bg-white/5 text-text-muted cursor-not-allowed border border-white/5'
-              }`}
-            >
-              <Sparkles className="w-4 h-4" />
-              {isSpinning
-                ? 'Opening...'
-                : canAfford
-                  ? 'Open Case'
-                  : 'Insufficient Funds'}
-            </button>
-
-            <button
-              onClick={handleQuickOpen}
-              disabled={!canAfford || activeOpening}
-              title="Instant Open"
-              className={`col-span-1 flex items-center justify-center rounded-xl transition-all ${
-                canAfford && !isSpinning
-                  ? 'bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 hover:scale-105 active:scale-95 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
-                  : 'bg-white/5 text-text-muted cursor-not-allowed'
-              }`}
-            >
-              <Zap className="w-4 h-4 text-amber-400" />
-            </button>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <button onClick={handleStartSpin} disabled={!canAfford || activeOpening} className={`col-span-2 py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${canAfford && !isSpinning ? 'bg-accent hover:bg-accent-hover text-surface-dark shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-[1.02] active:scale-95' : 'bg-white/5 text-text-muted cursor-not-allowed border border-white/5'}`}><Sparkles className="w-4 h-4" />{isSpinning ? 'Opening...' : canAfford ? 'Open Case' : 'Insufficient Funds'}</button>
+            <button onClick={handleQuickOpen} disabled={!canAfford || activeOpening} title="Instant Open" className={`py-3 rounded-xl flex items-center justify-center transition-all ${canAfford && !isSpinning ? 'bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 hover:scale-105 active:scale-95' : 'bg-white/5 text-text-muted cursor-not-allowed'}`}><Zap className="w-4 h-4 text-amber-400" /><span className="sr-only">Instant Open</span></button>
+            <button onClick={() => void handleBatchOpen(3)} disabled={!isLoaded || balance < caseData.price * 3 || activeOpening} className="col-span-2 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 disabled:opacity-50">Open 3× · {formatCurrency(caseData.price * 3)}</button>
+            <button onClick={() => void handleBatchOpen(5)} disabled={!isLoaded || balance < caseData.price * 5 || activeOpening} className="col-span-2 py-2 rounded-xl text-xs font-bold bg-white/5 border border-white/10 text-text-secondary hover:bg-white/10 disabled:opacity-50">Open 5× · {formatCurrency(caseData.price * 5)}</button>
           </div>
         </div>
       </div>
+
+      {showBatchResults && batchItems.length > 0 && (
+        <Dialog label={`Opened ${batchItems.length} cases`} onClose={closeOpening}>
+          <div className="relative max-w-4xl w-full rounded-3xl border border-white/15 bg-surface/95 p-6 shadow-2xl backdrop-blur-2xl">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-accent">Batch complete</p><h2 className="mt-1 text-2xl font-bold text-white">Your {batchItems.length} new drops</h2><p className="mt-1 text-sm text-text-secondary">All rewards were saved atomically to your collection.</p></div><button onClick={closeOpening} aria-label="Close batch results" className="p-2 rounded-xl bg-white/5 text-text-secondary hover:text-white"><X className="w-5 h-5" /></button></div>
+            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">{batchItems.map((item) => <div key={item.instanceId} className="rounded-2xl border bg-surface-dark/70 p-3" style={{ borderColor: `${getRarityColor(item.rarity)}45` }}><ItemImage src={item.image} alt={item.name} className="h-24 w-full object-contain" /><p className="mt-2 truncate text-xs font-bold text-white" title={item.name}>{item.name}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: getRarityColor(item.rarity) }}>{item.rarity}</p><p className="mt-1 text-sm font-black text-emerald-400">{formatCurrency(item.demoValue)}</p></div>)}</div>
+            <button onClick={closeOpening} className="mt-6 w-full rounded-xl bg-white px-5 py-3 text-sm font-bold text-black hover:bg-accent">Done</button>
+          </div>
+        </Dialog>
+      )}
 
       {/* Roulette Modal */}
       <>
