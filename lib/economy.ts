@@ -538,7 +538,16 @@ export function commit(
   env?: OpeningEnvironment
 ) {
   const change = transition(readSnapshot(storage), command, env);
-  if (change.result.ok)
+  if (change.result.ok) {
+    const v1State = {
+      version: 1,
+      balanceCents: change.state.balanceCents,
+      xp: change.state.xp,
+      inventory: change.state.inventory,
+      history: change.state.history,
+    };
+    storage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(v1State));
     storage.setItem(STORAGE_KEY, JSON.stringify(change.state));
+  }
   return change;
 }

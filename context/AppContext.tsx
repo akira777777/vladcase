@@ -15,6 +15,7 @@ import {
   initialState,
   readSnapshot,
   STORAGE_KEY,
+  LEGACY_STORAGE_KEY,
   type Command,
   type Result,
   type Snapshot,
@@ -45,6 +46,16 @@ function useEconomyController() {
         );
       await navigator.locks.request(STORAGE_KEY, () => {
         const saved = readSnapshot(localStorage);
+        const v1 = {
+          version: 1,
+          balanceCents: saved.balanceCents,
+          xp: saved.xp,
+          inventory: saved.inventory,
+          history: saved.history,
+        };
+        if (localStorage.getItem(LEGACY_STORAGE_KEY) === null) {
+          localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(v1));
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         setState(saved);
       });
@@ -65,7 +76,12 @@ function useEconomyController() {
   useEffect(() => {
     void refresh();
     const sync = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === null) void refresh();
+      if (
+        event.key === STORAGE_KEY ||
+        event.key === LEGACY_STORAGE_KEY ||
+        event.key === null
+      )
+        void refresh();
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);

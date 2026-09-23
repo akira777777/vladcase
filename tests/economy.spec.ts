@@ -179,7 +179,7 @@ test('large inventory paginates, filters, sorts, and resets visible count', asyn
       localStorage.setItem(
         key,
         JSON.stringify({
-          version: 1,
+          version: 2,
           balanceCents: 100000,
           xp: 0,
           history: [],

@@ -18,7 +18,22 @@ export default function SettingsPage() {
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'vladcase-progress.json'; anchor.click(); URL.revokeObjectURL(url); setMessage('Progress export downloaded.');
   };
   const importProgress = async (file: File) => {
-    try { const value = JSON.parse(await file.text()); if (value.version !== 2) throw new Error('Unsupported version'); localStorage.setItem('vladcase_state_v2', JSON.stringify(value)); setMessage('Progress imported. Reloading…'); window.location.reload(); } catch { setMessage('That file is not a valid v2 progress snapshot.'); }
+    try {
+      const value = validateSnapshot(JSON.parse(await file.text()));
+      const v1 = {
+        version: 1,
+        balanceCents: value.balanceCents,
+        xp: value.xp,
+        inventory: value.inventory,
+        history: value.history,
+      };
+      localStorage.setItem('vladcase_state_v1', JSON.stringify(v1));
+      localStorage.setItem('vladcase_state_v2', JSON.stringify(value));
+      setMessage('Progress imported. Reloading…');
+      window.location.reload();
+    } catch {
+      setMessage('That file is not a valid v2 progress snapshot.');
+    }
   };
   return <div className="mx-auto max-w-3xl px-4 sm:px-6 py-10 space-y-8"><div><Link href="/" className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-white"><ArrowLeft className="h-4 w-4" />Back to cases</Link><h1 className="mt-6 text-4xl sm:text-6xl font-black font-display text-white">Settings</h1><p className="mt-2 text-sm text-text-secondary">Tune your local simulator without changing your saved collection.</p></div>
     <section className="rounded-3xl border border-white/10 bg-surface/80 divide-y divide-white/10 overflow-hidden"><div className="p-5"><h2 className="flex items-center gap-2 font-bold text-white"><Volume2 className="h-4 w-4 text-accent" />Sound</h2><label className="mt-4 flex items-center justify-between gap-4 text-sm text-text-secondary"><span>Roulette and drop audio</span><button role="switch" aria-checked={preferences.soundEnabled} onClick={() => setPreference('soundEnabled', !preferences.soundEnabled)} className={`relative h-6 w-11 rounded-full transition-colors ${preferences.soundEnabled ? 'bg-accent' : 'bg-white/15'}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${preferences.soundEnabled ? 'left-6' : 'left-1'}`} /></button></label></div>
