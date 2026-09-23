@@ -3,29 +3,13 @@
 import ItemImage from '@/components/ui/ItemImage';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import Roulette from './roulette/Roulette';
+import WinScreen from './WinScreen';
 import Dialog from '@/components/ui/Dialog';
 import { useEconomy } from '@/hooks/useEconomy';
 import { useInventory } from '@/hooks/useInventory';
 import { usePreferences } from '@/hooks/usePreferences';
 import { Case, Item } from '@/types';
-const Roulette = dynamic(() => import('./roulette/Roulette'), {
-  loading: () => (
-    <div className="h-52 flex items-center justify-center text-accent text-sm" role="status">
-      Initializing roulette reel…
-    </div>
-  ),
-});
-const WinScreen = dynamic(() => import('./WinScreen'), {
-  loading: () => (
-    <div
-      role="status"
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center text-white"
-    >
-      Revealing drop…
-    </div>
-  ),
-});
 import { formatCurrency, getRarityColor, getRarityBadgeClass } from '@/lib/utils';
 import { Sparkles, Zap, X, Eye, FastForward, Trophy } from 'lucide-react';
 
