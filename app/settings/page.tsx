@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { usePreferences } from '@/hooks/usePreferences';
+import { validateSnapshot } from '@/lib/economy';
 import { ArrowLeft, Check, Download, RotateCcw, Settings2, Upload, Volume2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 

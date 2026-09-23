@@ -5,6 +5,7 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
+import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
 import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';
@@ -35,6 +36,7 @@ const rarityRank: Record<Rarity, number> = {
 
 export default function InventoryPage() {
   const { inventory, favoriteIds, toggleFavorite, removeItem, sellItem, sellAll, isLoaded } = useInventory();
+  const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
 
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
@@ -320,12 +322,32 @@ export default function InventoryPage() {
                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
                       {item.weaponType}
                     </span>
-                    <span
-                      className="text-[9px] font-bold uppercase tracking-wider"
-                      style={{ color: rarityColor }}
-                    >
-                      {item.rarity}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => void toggleFavorite(item.id)}
+                        className={`p-0.5 rounded transition-colors ${
+                          favoriteIds.includes(item.id)
+                            ? 'text-pink-400'
+                            : 'text-text-muted hover:text-white'
+                        }`}
+                        title={
+                          favoriteIds.includes(item.id)
+                            ? 'Remove from favorites'
+                            : 'Add to favorites'
+                        }
+                      >
+                        <Heart
+                          className="w-3.5 h-3.5"
+                          fill={favoriteIds.includes(item.id) ? 'currentColor' : 'none'}
+                        />
+                      </button>
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-wider"
+                        style={{ color: rarityColor }}
+                      >
+                        {item.rarity}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Weapon Image */}

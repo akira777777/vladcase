@@ -148,6 +148,46 @@ describe('saved progress', () => {
       expect(saved.getItem(STORAGE_KEY)).toBe(raw);
     }
   );
+  it('migrates v1 snapshots into v2 and preserves the legacy source', () => {
+    const legacy = {
+      version: 1,
+      balanceCents: 100000,
+      xp: 50,
+      inventory: [],
+      history: [],
+    };
+    const saved = storage({ vladcase_state_v1: JSON.stringify(legacy) });
+    const migrated = readSnapshot(saved);
+    expect(migrated.version).toBe(2);
+    expect(migrated.balanceCents).toBe(100000);
+    expect(migrated.stats.totalOpens).toBe(0);
+    expect(saved.getItem('vladcase_state_v1')).toBe(JSON.stringify(legacy));
+  });
+
+  it('opens a batch atomically and records every reward once', () => {
+    const saved = storage();
+    let id = 0;
+    const result = commit(
+      saved,
+      { type: 'openMany', caseData: sample, count: 3 },
+      { ...env, id: () => `batch-${++id}` }
+    );
+    expect(result.result.ok).toBe(true);
+    const next = readSnapshot(saved);
+    expect(next.balanceCents).toBe(95500);
+    expect(next.inventory).toHaveLength(3);
+    expect(next.history).toHaveLength(3);
+    expect(new Set(next.inventory.map((item) => item.instanceId)).size).toBe(3);
+    expect(next.stats.totalOpens).toBe(3);
+  });
+
+  it('rejects invalid v1 snapshots without overwriting the legacy record', () => {
+    const raw = '{"version":1,"inventory":[null]}';
+    const saved = storage({ vladcase_state_v1: raw });
+    expect(() => readSnapshot(saved)).toThrow();
+    expect(saved.getItem('vladcase_state_v1')).toBe(raw);
+  });
+
   it('rejects duplicate instance IDs and unsafe numeric totals', () => {
     const entry = { ...sample.items[0], instanceId: 'same' };
     expect(() =>

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ITEMS } from '../data/mockData';
 
-const key = 'vladcase_state_v1';
+const key = 'vladcase_state_v2';
 test.beforeEach(async ({ page }) => {
   page.on('pageerror', (error) => {
     throw error;
@@ -139,7 +139,7 @@ test('storage failure does not charge or award, and retry works', async ({
   await page.evaluate(() => {
     const original = Storage.prototype.setItem;
     Storage.prototype.setItem = function (key, value) {
-      if (key === 'vladcase_state_v1') {
+      if (key === 'vladcase_state_v2') {
         Storage.prototype.setItem = original;
         throw new DOMException('Full', 'QuotaExceededError');
       }
