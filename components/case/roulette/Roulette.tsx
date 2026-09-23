@@ -5,7 +5,8 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { Item } from '@/types';
-import { getRarityColor } from '@/lib/utils';
+import { getRarityColor, formatCurrency } from '@/lib/utils';
+import { playRouletteTick } from '@/lib/sound';
 
 interface RouletteProps {
   items: Item[];
@@ -29,38 +30,6 @@ export const Roulette: React.FC<RouletteProps> = ({
   const controls = useAnimation();
   const completionRef = useRef(onComplete);
   completionRef.current = onComplete;
-  const audioContextRef = useRef<AudioContext | null>(null);
-
-  // Play synthetic mechanical tick sound
-  const playTick = () => {
-    try {
-      if (!audioContextRef.current) {
-        const AudioContextClass =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext;
-        if (AudioContextClass) {
-          audioContextRef.current = new AudioContextClass();
-        }
-      }
-      const ctx = audioContextRef.current;
-      if (ctx && ctx.state === 'running') {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.03);
-        gain.gain.setValueAtTime(0.04, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.035);
-      }
-    } catch {
-      // Audio autoplay restrictions or unsupported
-    }
-  };
 
   // Build reel items array with winningItem securely placed at TARGET_INDEX
   const reelItems = useMemo(() => {
@@ -91,19 +60,14 @@ export const Roulette: React.FC<RouletteProps> = ({
       return;
     }
 
-    // Resume AudioContext on user interaction if suspended
-    if (
-      audioContextRef.current &&
-      audioContextRef.current.state === 'suspended'
-    ) {
-      void audioContextRef.current.resume().catch(() => {});
-    }
-
     let cancelled = false;
     let completed = false;
+    let started = false;
     let completionTimer: ReturnType<typeof setTimeout> | undefined;
-    const containerWidth = containerRef.current?.offsetWidth || 800;
-    let currentWidth = containerWidth;
+    const tickTimeouts: NodeJS.Timeout[] = [];
+    const jitter = (Math.random() - 0.5) * 80;
+    let currentWidth = 0;
+
     const completeSoon = () => {
       if (cancelled || completed) return;
       clearTimeout(completionTimer);
@@ -113,94 +77,129 @@ export const Roulette: React.FC<RouletteProps> = ({
         completionRef.current();
       }, 500);
     };
-    // Calculate position so TARGET_INDEX item is centered under the pointer
-    // Random jitter between -45px and +45px within the 180px card
-    const jitter = (Math.random() - 0.5) * 80;
-    const targetOffset =
-      16 +
-      TARGET_INDEX * TOTAL_ITEM_SPACE +
-      ITEM_WIDTH / 2 -
-      containerWidth / 2 +
-      jitter;
 
-    controls
-      .start({
-        x: -targetOffset,
-        transition: {
-          duration: 4.8,
-          ease: [0.15, 0.85, 0.25, 1], // CS2-style cubic-bezier deceleration
-        },
-      })
-      .then(() => {
-        completeSoon();
-      });
+    const startSpin = (width: number) => {
+      if (started || cancelled) return;
+      started = true;
+      currentWidth = width;
 
-    // Play periodic audio ticks with increasing intervals as reel slows down
-    const tickTimeouts: NodeJS.Timeout[] = [];
-    const totalTicks = 35;
-    for (let i = 0; i < totalTicks; i++) {
-      // Non-linear progression matching the deceleration curve
-      const progress = i / totalTicks;
-      const delay = Math.pow(progress, 2.2) * 4400;
-      const t = setTimeout(() => {
-        playTick();
-      }, delay);
-      tickTimeouts.push(t);
+      const targetOffset =
+        16 +
+        TARGET_INDEX * TOTAL_ITEM_SPACE +
+        ITEM_WIDTH / 2 -
+        width / 2 +
+        jitter;
+
+      controls
+        .start({
+          x: -targetOffset,
+          transition: {
+            duration: 4.8,
+            ease: [0.15, 0.85, 0.25, 1], // CS2-style cubic-bezier deceleration
+          },
+        })
+        .then(() => {
+          if (!cancelled) {
+            const finalWidth =
+              containerRef.current?.offsetWidth || currentWidth;
+            const finalTargetOffset =
+              16 +
+              TARGET_INDEX * TOTAL_ITEM_SPACE +
+              ITEM_WIDTH / 2 -
+              finalWidth / 2 +
+              jitter;
+            controls.set({ x: -finalTargetOffset });
+            completeSoon();
+          }
+        });
+
+      // Play periodic audio ticks with increasing intervals as reel slows down
+      const totalTicks = 35;
+      for (let i = 0; i < totalTicks; i++) {
+        const progress = i / totalTicks;
+        const delay = Math.pow(progress, 2.2) * 4400;
+        const t = setTimeout(() => {
+          if (!cancelled) playRouletteTick(1 + (1 - progress) * 0.25);
+        }, delay);
+        tickTimeouts.push(t);
+      }
+    };
+
+    const initialWidth = containerRef.current?.offsetWidth || 0;
+    if (initialWidth > 0) {
+      startSpin(initialWidth);
     }
 
-    const observer = new ResizeObserver(() => {
-      const width = containerRef.current?.offsetWidth || containerWidth;
-      if (width !== currentWidth) {
-        currentWidth = width;
-        controls.stop();
-        controls.set({
-          x: -(
+    const observer = new ResizeObserver((entries) => {
+      if (cancelled) return;
+      const entry = entries[0];
+      const width =
+        entry?.contentRect?.width ||
+        containerRef.current?.offsetWidth ||
+        0;
+      if (width <= 0) return;
+
+      if (!started) {
+        startSpin(width);
+      } else if (completed) {
+        // If already completed and user resizes window, keep item centered
+        if (Math.abs(width - currentWidth) > 2) {
+          currentWidth = width;
+          const newTargetOffset =
             16 +
             TARGET_INDEX * TOTAL_ITEM_SPACE +
             ITEM_WIDTH / 2 -
             width / 2 +
-            jitter
-          ),
-        });
-        tickTimeouts.forEach(clearTimeout);
-        completeSoon();
+            jitter;
+          controls.set({ x: -newTargetOffset });
+        }
       }
     });
-    if (containerRef.current) observer.observe(containerRef.current);
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    const fallbackTimer = setTimeout(() => {
+      if (!started && !cancelled) {
+        const fallbackWidth = containerRef.current?.offsetWidth || 800;
+        startSpin(fallbackWidth);
+      }
+    }, 100);
+
     return () => {
       cancelled = true;
-      controls.stop();
       observer.disconnect();
       clearTimeout(completionTimer);
+      clearTimeout(fallbackTimer);
       tickTimeouts.forEach(clearTimeout);
-      void audioContextRef.current?.close().catch(() => {});
-      audioContextRef.current = null;
+      controls.stop();
     };
   }, [isSpinning, controls]);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-52 bg-surface-dark border-y-2 border-white/10 overflow-hidden shadow-2xl rounded-2xl select-none"
+      className="relative w-full h-56 bg-surface-dark/95 border-y-2 border-white/10 overflow-hidden shadow-2xl rounded-2xl select-none"
     >
       {/* Top Center Needle */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-        <div className="w-1 h-8 bg-gradient-to-b from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
-        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-accent shadow-[0_0_10px_#22d3ee]" />
+        <div className="w-1.5 h-8 bg-gradient-to-b from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
+        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-accent shadow-[0_0_15px_#22d3ee]" />
       </div>
 
       {/* Bottom Center Needle */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[10px] border-b-accent shadow-[0_0_10px_#22d3ee]" />
-        <div className="w-1 h-8 bg-gradient-to-t from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
+        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[12px] border-b-accent shadow-[0_0_15px_#22d3ee]" />
+        <div className="w-1.5 h-8 bg-gradient-to-t from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
       </div>
 
       {/* Center Vertical Guide Line */}
-      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent/30 z-10 pointer-events-none shadow-[0_0_8px_#22d3ee]" />
+      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent/40 z-10 pointer-events-none shadow-[0_0_10px_#22d3ee]" />
 
       {/* Edge Shadow Vignette */}
-      <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-surface-dark via-surface-dark/80 to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-surface-dark via-surface-dark/80 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-surface-dark via-surface-dark/90 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-surface-dark via-surface-dark/90 to-transparent z-10 pointer-events-none" />
 
       {/* Reel strip */}
       <motion.div
@@ -216,40 +215,46 @@ export const Roulette: React.FC<RouletteProps> = ({
               style={{
                 width: `${ITEM_WIDTH}px`,
                 borderColor: `${rarityColor}40`,
+                boxShadow: `0 4px 15px ${rarityColor}10`,
               }}
-              className="h-44 flex-shrink-0 flex flex-col items-center justify-between bg-surface border rounded-xl p-3 relative overflow-hidden transition-all group"
+              className="h-48 flex-shrink-0 flex flex-col items-center justify-between bg-surface/90 border rounded-2xl p-3 relative overflow-hidden transition-all group"
             >
               {/* Rarity ambient top glow */}
               <div
-                className="absolute top-0 inset-x-0 h-1"
+                className="absolute top-0 inset-x-0 h-1.5"
                 style={{
                   backgroundColor: rarityColor,
-                  boxShadow: `0 0 10px ${rarityColor}`,
+                  boxShadow: `0 0 12px ${rarityColor}`,
                 }}
               />
 
-              {/* Weapon type */}
-              <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider self-start">
-                {item.weaponType}
-              </span>
+              {/* Weapon type & estimated value */}
+              <div className="w-full flex items-center justify-between px-1">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                  {item.weaponType}
+                </span>
+                <span className="text-[10px] font-bold text-emerald-400 font-display">
+                  {formatCurrency(item.demoValue)}
+                </span>
+              </div>
 
               {/* Weapon Image */}
-              <div className="relative w-full h-24 flex items-center justify-center my-1">
+              <div className="relative w-full h-24 flex items-center justify-center my-1 bg-surface-dark/40 rounded-xl overflow-hidden p-1">
                 <ItemImage
                   loading="eager"
                   src={item.image}
                   alt={item.name}
-                  className="max-h-20 max-w-full object-contain filter drop-shadow-[0_4px_10px_rgba(0,0,0,0.7)] group-hover:scale-105 transition-transform"
+                  className="max-h-20 max-w-full object-contain filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] group-hover:scale-105 transition-transform"
                 />
               </div>
 
               {/* Weapon Name and Rarity */}
               <div className="w-full text-center">
-                <p className="text-xs font-bold text-white truncate px-1">
+                <p className="text-xs font-bold text-white truncate px-1" title={item.name}>
                   {item.name}
                 </p>
                 <p
-                  className="text-[10px] font-medium uppercase tracking-wider truncate"
+                  className="text-[10px] font-bold uppercase tracking-wider truncate mt-0.5"
                   style={{ color: rarityColor }}
                 >
                   {item.rarity}
@@ -258,7 +263,7 @@ export const Roulette: React.FC<RouletteProps> = ({
 
               {/* Bottom rarity bar */}
               <div
-                className="absolute bottom-0 inset-x-0 h-[2px]"
+                className="absolute bottom-0 inset-x-0 h-[3px]"
                 style={{ backgroundColor: rarityColor }}
               />
             </div>

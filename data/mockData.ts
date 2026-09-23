@@ -183,6 +183,61 @@ export const ITEMS: Item[] = [
     demoValue: 1.40,
     dropChance: 38.0,
   },
+  // Fanservice & Contraband Expansions (Appended to preserve existing test indices)
+  {
+    id: "item-awp-gungnir",
+    name: "AWP | Gungnir",
+    weaponType: "AWP",
+    image: "/assets/item-awp-gungnir.webp",
+    rarity: "Special Item",
+    demoValue: 8500.00,
+    dropChance: 0.05,
+  },
+  {
+    id: "item-knife-sapphire",
+    name: "Butterfly Knife | Sapphire",
+    weaponType: "Knife",
+    image: "/assets/item-knife-sapphire.webp",
+    rarity: "Special Item",
+    demoValue: 4900.00,
+    dropChance: 0.10,
+  },
+  {
+    id: "item-aug-akihabara",
+    name: "AUG | Akihabara Accept",
+    weaponType: "Rifle",
+    image: "/assets/item-aug-akihabara.webp",
+    rarity: "Covert",
+    demoValue: 2100.00,
+    dropChance: 0.25,
+  },
+  {
+    id: "item-m4-temukau",
+    name: "M4A4 | Temukau",
+    weaponType: "M4A4",
+    image: "/assets/item-m4-temukau.webp",
+    rarity: "Covert",
+    demoValue: 340.00,
+    dropChance: 0.90,
+  },
+  {
+    id: "item-glock-bulletqueen",
+    name: "Glock-18 | Bullet Queen",
+    weaponType: "Pistol",
+    image: "/assets/item-glock-bulletqueen.webp",
+    rarity: "Covert",
+    demoValue: 110.00,
+    dropChance: 1.40,
+  },
+  {
+    id: "item-deagle-printstream",
+    name: "Desert Eagle | Printstream",
+    weaponType: "Pistol",
+    image: "/assets/item-deagle-printstream.webp",
+    rarity: "Covert",
+    demoValue: 180.00,
+    dropChance: 1.80,
+  },
 ];
 
 export const CASES: Case[] = [
@@ -260,6 +315,41 @@ export const CASES: Case[] = [
       ITEMS[3],  // AWP Asiimov (Covert)
       ITEMS[0],  // Karambit Doppler (Special)
       ITEMS[1],  // Butterfly Knife Fade (Special)
+    ],
+  },
+  {
+    id: "case-fanservice-anime",
+    name: "Waifu & Anime",
+    image: "/assets/case-fanservice-anime.webp",
+    price: 120.00,
+    category: "FANSERVICE",
+    description: "Cyberpunk kawaii aesthetics, top anime finishes, and the mythical Sapphire Butterfly Knife.",
+    items: [
+      ITEMS[10], // Glock Water Elemental
+      ITEMS[7],  // AK Neon Rider
+      ITEMS[9],  // AWP Hyper Beast
+      ITEMS[24], // Desert Eagle Printstream
+      ITEMS[23], // Glock Bullet Queen
+      ITEMS[22], // M4A4 Temukau
+      ITEMS[21], // AUG Akihabara Accept
+      ITEMS[20], // Butterfly Sapphire
+    ],
+  },
+  {
+    id: "case-contraband-gods",
+    name: "High Roller Vault",
+    image: "/assets/case-contraband-gods.webp",
+    price: 750.00,
+    category: "PREMIUM",
+    description: "Ultra-luxury tier containing AWP Gungnir, Dragon Lore, Howl, and rare Doppler knives.",
+    items: [
+      ITEMS[4],  // AK Fire Serpent
+      ITEMS[5],  // M4 Howl
+      ITEMS[0],  // Karambit Doppler
+      ITEMS[1],  // Butterfly Fade
+      ITEMS[20], // Butterfly Sapphire
+      ITEMS[2],  // AWP Dragon Lore
+      ITEMS[19], // AWP Gungnir
     ],
   },
 ];

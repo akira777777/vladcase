@@ -1,11 +1,11 @@
-import { Rarity } from "../types";
+import { Item, Rarity } from "../types";
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 export function formatCurrency(amount: number): string {
   return currencyFormatter.format(amount);
@@ -51,4 +51,22 @@ export function getRarityBadgeClass(rarity: Rarity): string {
     default:
       return 'bg-white/10 text-white border-white/20';
   }
+}
+
+export function getRankTitle(level: number): { title: string; color: string } {
+  if (level >= 10) return { title: 'The Global Elite', color: '#FFD700' };
+  if (level >= 8) return { title: 'Supreme Master', color: '#EB4B4B' };
+  if (level >= 6) return { title: 'Legendary Eagle', color: '#D32CE6' };
+  if (level >= 4) return { title: 'Master Guardian', color: '#8847FF' };
+  if (level >= 3) return { title: 'Gold Nova Master', color: '#4B69FF' };
+  if (level >= 2) return { title: 'Gold Nova', color: '#5E98D9' };
+  return { title: 'Silver Elite', color: '#B0C3D9' };
+}
+
+export function getItemWear(item: Item): string {
+  if (item.rarity === 'Special Item') return '★ Factory New';
+  if (item.demoValue > 500) return 'Factory New';
+  if (item.demoValue > 100) return 'Minimal Wear';
+  if (item.demoValue > 20) return 'Field-Tested';
+  return 'Battle-Scarred';
 }

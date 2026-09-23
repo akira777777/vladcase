@@ -1,22 +1,22 @@
-export type Rarity = 
-  | 'Consumer' 
-  | 'Industrial' 
-  | 'Mil-Spec' 
-  | 'Restricted' 
-  | 'Classified' 
-  | 'Covert' 
+export type Rarity =
+  | 'Consumer'
+  | 'Industrial'
+  | 'Mil-Spec'
+  | 'Restricted'
+  | 'Classified'
+  | 'Covert'
   | 'Special Item';
 
 export interface Item {
   id: string;
   name: string;
-  weaponType: string; // e.g., 'AK-47', 'AWP', 'Knife', 'Glock-18', 'M4A4'
+  weaponType: string;
   image: string;
   rarity: Rarity;
   demoValue: number;
-  dropChance: number; // weight or percentage
-  instanceId?: string; // unique identifier per instance in user's inventory
-  unboxedAt?: number;  // timestamp of unboxing
+  dropChance: number;
+  instanceId?: string;
+  unboxedAt?: number;
 }
 
 export interface Case {
@@ -24,25 +24,36 @@ export interface Case {
   name: string;
   image: string;
   price: number;
-  category: 'POPULAR' | 'NEW' | 'BUDGET' | 'PREMIUM' | 'KNIFE';
+  category:
+    | 'POPULAR'
+    | 'NEW'
+    | 'BUDGET'
+    | 'PREMIUM'
+    | 'KNIFE'
+    | 'FANSERVICE';
   description?: string;
   items: Item[];
 }
 
 export interface CaseHistoryEntry {
+  id: string;
   caseId: string;
   caseName: string;
+  casePriceCents: number;
   item: Item;
+  itemValueCents: number;
   timestamp: number;
 }
 
-export interface UserProfile {
-  id: string;
-  username: string;
-  avatar: string;
-  balance: number;
-  xp: number;
-  level: number;
-  inventory: Item[];
-  caseHistory: CaseHistoryEntry[];
+export interface LifetimeStats {
+  totalOpens: number;
+  totalSpentCents: number;
+  totalDropValueCents: number;
+  realizedCents: number;
+  removedValueCents: number;
+  rarityCounts: Record<Rarity, number>;
+  caseCounts: Record<string, number>;
+  currentRareStreak: number;
+  bestRareStreak: number;
+  bestDropInstanceId: string | null;
 }

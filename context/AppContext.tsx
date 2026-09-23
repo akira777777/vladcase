@@ -3,13 +3,13 @@
 import React, {
   createContext,
   useContext,
-  useState,
   useEffect,
+  useState,
   useCallback,
   useMemo,
   useRef,
 } from 'react';
-import type { Case } from '@/types';
+import type { Case, Item } from '@/types';
 import {
   commit,
   initialState,
@@ -17,15 +17,24 @@ import {
   STORAGE_KEY,
   type Command,
   type Result,
+  type Snapshot,
 } from '@/lib/economy';
+import {
+  initialPreferences,
+  readPreferences,
+  writePreferences,
+  type Preferences,
+} from '@/lib/preferences';
+import { setSoundMuted } from '@/lib/sound';
 
-function useController() {
-  const [state, setState] = useState(initialState);
+function useEconomyController() {
+  const [state, setState] = useState<Snapshot>(initialState);
   const [isLoaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ready = useRef(false);
   const opening = useRef(false);
   const [activeOpening, setActiveOpening] = useState(false);
+
   const refresh = useCallback(async () => {
     ready.current = false;
     setLoaded(false);
@@ -36,8 +45,7 @@ function useController() {
         );
       await navigator.locks.request(STORAGE_KEY, () => {
         const saved = readSnapshot(localStorage);
-        if (localStorage.getItem(STORAGE_KEY) === null)
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         setState(saved);
       });
       ready.current = true;
@@ -45,10 +53,15 @@ function useController() {
       setError(null);
     } catch (cause) {
       setError(
-        `Progress could not be loaded. Saved data was preserved. ${cause instanceof Error ? cause.message : 'Check browser storage permissions.'}`
+        `Progress could not be loaded. Saved data was preserved. ${
+          cause instanceof Error
+            ? cause.message
+            : 'Check browser storage permissions.'
+        }`
       );
     }
   }, []);
+
   useEffect(() => {
     void refresh();
     const sync = (event: StorageEvent) => {
@@ -57,6 +70,7 @@ function useController() {
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
   }, [refresh]);
+
   const run = useCallback(async (command: Command): Promise<Result> => {
     if (!ready.current)
       return {
@@ -67,19 +81,7 @@ function useController() {
     try {
       return await navigator.locks.request(STORAGE_KEY, () => {
         const change = commit(localStorage, command);
-        setState((previous) => ({
-          ...change.state,
-          inventory:
-            JSON.stringify(previous.inventory) ===
-            JSON.stringify(change.state.inventory)
-              ? previous.inventory
-              : change.state.inventory,
-          history:
-            JSON.stringify(previous.history) ===
-            JSON.stringify(change.state.history)
-              ? previous.history
-              : change.state.history,
-        }));
+        setState(change.state);
         setError(change.result.ok ? null : change.result.message);
         return change.result;
       });
@@ -90,6 +92,7 @@ function useController() {
       return { ok: false, code: 'storage', message };
     }
   }, []);
+
   const actions = useMemo(
     () => ({
       addBalance: (amount: number) => run({ type: 'credit', amount }),
@@ -97,6 +100,12 @@ function useController() {
       removeItem: (id: string) => run({ type: 'remove', id }),
       sellAll: () => run({ type: 'sellAll' }),
       resetEconomy: () => run({ type: 'reset' }),
+      toggleFavorite: (id: string) => run({ type: 'toggleFavorite', id }),
+      toggleGoal: (id: string) => run({ type: 'toggleGoal', id }),
+      tradeUpContract: (inputIds: string[], rewardItem: Item) =>
+        run({ type: 'contract', inputIds, rewardItem }),
+      upgradeItem: (inputId: string, targetItem: Item, won: boolean) =>
+        run({ type: 'upgrade', inputId, targetItem, won }),
       openCase: async (caseData: Case): Promise<Result> => {
         if (opening.current)
           return {
@@ -113,6 +122,20 @@ function useController() {
         }
         return result;
       },
+      openMany: async (caseData: Case, count: number): Promise<Result> => {
+        if (opening.current)
+          return {
+            ok: false,
+            code: 'unavailable',
+            message: 'An opening is already active.',
+          };
+        opening.current = true;
+        setActiveOpening(true);
+        const result = await run({ type: 'openMany', caseData, count });
+        opening.current = false;
+        setActiveOpening(false);
+        return result;
+      },
       finishOpening: () => {
         opening.current = false;
         setActiveOpening(false);
@@ -122,7 +145,9 @@ function useController() {
   );
   return { state, isLoaded, error, refresh, activeOpening, actions };
 }
-type Controller = ReturnType<typeof useController>;
+
+type Controller = ReturnType<typeof useEconomyController>;
+type Actions = Controller['actions'];
 const EconomyContext = createContext<
   | ({
       balance: number;
@@ -130,20 +155,58 @@ const EconomyContext = createContext<
       level: number;
       isLoaded: boolean;
       activeOpening: boolean;
-    } & Controller['actions'])
+    } & Actions)
   | null
 >(null);
 const InventoryContext = createContext<
   | ({
-      inventory: Controller['state']['inventory'];
+      inventory: Snapshot['inventory'];
+      favoriteIds: string[];
       isLoaded: boolean;
-    } & Controller['actions'])
+    } & Actions)
   | null
 >(null);
-const HistoryContext = createContext<Controller['state']['history']>([]);
+const AppStateContext = createContext<
+  | (Snapshot & { isLoaded: boolean } & Actions)
+  | null
+>(null);
+const PreferencesContext = createContext<{
+  preferences: Preferences;
+  setPreference: <Key extends keyof Preferences>(
+    key: Key,
+    value: Preferences[Key]
+  ) => void;
+} | null>(null);
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const controller = useEconomyController();
   const { state, isLoaded, error, refresh, activeOpening, actions } =
-    useController();
+    controller;
+  const [preferences, setPreferences] = useState<Preferences>(initialPreferences);
+
+  useEffect(() => {
+    try {
+      const saved = readPreferences(localStorage);
+      setPreferences(saved);
+      setSoundMuted(!saved.soundEnabled);
+    } catch {
+      const defaults = initialPreferences();
+      setPreferences(defaults);
+      setSoundMuted(false);
+    }
+  }, []);
+
+  const setPreference = useCallback(
+    <Key extends keyof Preferences>(key: Key, value: Preferences[Key]) => {
+      setPreferences((previous) => {
+        const next = writePreferences(localStorage, { ...previous, [key]: value });
+        if (key === 'soundEnabled') setSoundMuted(!next.soundEnabled);
+        return next;
+      });
+    },
+    []
+  );
+
   const economy = useMemo(
     () => ({
       balance: state.balanceCents / 100,
@@ -155,31 +218,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }),
     [state.balanceCents, state.xp, isLoaded, activeOpening, actions]
   );
+
   const inventory = useMemo(
-    () => ({ inventory: state.inventory, isLoaded, ...actions }),
-    [state.inventory, isLoaded, actions]
+    () => ({ inventory: state.inventory, favoriteIds: state.favoriteIds, isLoaded, ...actions }),
+    [state.inventory, state.favoriteIds, isLoaded, actions]
   );
+  const appState = useMemo(
+    () => ({ ...state, isLoaded, ...actions }),
+    [state, isLoaded, actions]
+  );
+  const preferenceState = useMemo(
+    () => ({ preferences, setPreference }),
+    [preferences, setPreference]
+  );
+
   return (
-    <EconomyContext.Provider value={economy}>
-      <InventoryContext.Provider value={inventory}>
-        <HistoryContext.Provider value={state.history}>
-          {error && (
-            <div
-              role="alert"
-              className="fixed bottom-4 left-4 right-4 z-[100] rounded-xl bg-red-950 p-4 text-white border border-red-400"
-            >
-              {error}{' '}
-              <button className="underline ml-3" onClick={() => void refresh()}>
-                Retry loading
-              </button>
-            </div>
-          )}
-          {children}
-        </HistoryContext.Provider>
-      </InventoryContext.Provider>
-    </EconomyContext.Provider>
+    <PreferencesContext.Provider value={preferenceState}>
+      <EconomyContext.Provider value={economy}>
+        <InventoryContext.Provider value={inventory}>
+          <AppStateContext.Provider value={appState}>
+            {error && (
+              <div
+                role="alert"
+                className="fixed bottom-4 left-4 right-4 z-[100] rounded-xl bg-red-950 p-4 text-white border border-red-400"
+              >
+                {error}{' '}
+                <button className="underline ml-3" onClick={() => void refresh()}>
+                  Retry loading
+                </button>
+              </div>
+            )}
+            {children}
+          </AppStateContext.Provider>
+        </InventoryContext.Provider>
+      </EconomyContext.Provider>
+    </PreferencesContext.Provider>
   );
 }
+
 export function useEconomyState() {
   const value = useContext(EconomyContext);
   if (!value) throw new Error('AppProvider missing');
@@ -191,5 +267,12 @@ export function useInventoryState() {
   return value;
 }
 export function useApp() {
-  return { history: useContext(HistoryContext) };
+  const value = useContext(AppStateContext);
+  if (!value) throw new Error('AppProvider missing');
+  return value;
+}
+export function usePreferences() {
+  const value = useContext(PreferencesContext);
+  if (!value) throw new Error('AppProvider missing');
+  return value;
 }

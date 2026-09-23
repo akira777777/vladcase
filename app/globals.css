@@ -20,15 +20,34 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
 
 body {
   background-color: #080A0D;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.07) 0%, transparent 45%),
+    radial-gradient(circle at 85% 30%, rgba(136, 71, 255, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 15% 70%, rgba(245, 158, 11, 0.04) 0%, transparent 40%),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+  background-attachment: fixed;
   color: #F5F7FA;
   overflow-x: hidden;
 }
 
 /* Glassmorphism Cards */
 .glass-card {
-  background: rgba(17, 21, 28, 0.7);
+  background: rgba(17, 21, 28, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-card-interactive {
+  background: rgba(17, 21, 28, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-interactive:hover {
+  background: rgba(22, 29, 39, 0.9);
+  transform: translateY(-2px);
 }
 
 /* Metallic Heading Effect */
@@ -40,17 +59,21 @@ body {
 
 /* Glowing text */
 .text-glow {
-  text-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+  text-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0C0F14;
+  background: #080A0D;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -60,4 +83,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #2E3A4E;
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

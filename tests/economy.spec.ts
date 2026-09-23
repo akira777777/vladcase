@@ -44,6 +44,24 @@ test('opening saves before animation, survives reload, and sells once', async ({
     page.getByRole('button', { name: 'Sell', exact: true })
   ).toHaveCount(0);
 });
+
+test('normal opening animates reel and does not skip prematurely', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByRole('button', { name: 'Open Case', exact: true })
+    .first()
+    .click();
+  const openingDialog = page.getByRole('dialog', { name: /^Opening / });
+  await expect(openingDialog).toBeVisible();
+  // The animation is ~4.8s. It must still be spinning after 2s and not aborted.
+  await page.waitForTimeout(2000);
+  await expect(openingDialog).toBeVisible();
+  await expect(page.getByRole('dialog', { name: /^Won / })).toBeVisible({
+    timeout: 6000,
+  });
+});
 test('quick opening, keyboard dismissal, repeat opening, and selling', async ({
   page,
 }) => {
