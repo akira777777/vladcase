@@ -5,6 +5,7 @@ import ItemImage from '@/components/ui/ItemImage';
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
+import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
 import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';
@@ -35,6 +36,7 @@ const rarityRank: Record<Rarity, number> = {
 
 export default function InventoryPage() {
   const { inventory, favoriteIds, toggleFavorite, removeItem, sellItem, sellAll, isLoaded } = useInventory();
+  const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
 
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
@@ -98,6 +100,7 @@ export default function InventoryPage() {
   }, [filteredItems, sortBy]);
 
   const handleSellOne = (item: Item) => {
+    if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
     const id = item.instanceId || item.id;
     void sellItem(id);
@@ -105,14 +108,9 @@ export default function InventoryPage() {
 
   const handleSellAll = () => {
     if (inventory.length === 0) return;
-    if (
-      confirm(
-        `Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`
-      )
-    ) {
-      playCashSound();
-      void sellAll();
-    }
+    if (preferences.confirmSales && !window.confirm(`Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`)) return;
+    playCashSound();
+    void sellAll();
   };
 
   return (
@@ -400,8 +398,8 @@ export default function InventoryPage() {
                   <button
                     disabled={!isLoaded}
                     onClick={() => {
-                      if (confirm(`Remove ${item.name} without selling it?`))
-                        void removeItem(item.instanceId!);
+                      if (preferences.confirmDeletes && !window.confirm(`Remove ${item.name} without selling it?`)) return;
+                      void removeItem(item.instanceId!);
                     }}
                     title="Remove from inventory"
                     className="col-span-1 py-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-text-muted hover:text-red-400 border border-white/5 flex items-center justify-center transition-colors active:scale-95"

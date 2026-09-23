@@ -21,7 +21,7 @@ Browser tests start the production server on loopback port 3100. Build before ru
 
 ## Progress and transactions
 
-The versioned `vladcase_state_v1` localStorage snapshot contains balance in integer cents, XP, inventory instances, and the latest 20 openings. Existing `vladcase_balance`, `vladcase_xp`, `vladcase_inventory`, and `vladcase_history` keys are imported once and retained. Invalid data is preserved and mutations are blocked until it is repaired; no automatic reset occurs.
+The versioned `vladcase_state_v2` localStorage snapshot contains balance in integer cents, XP, inventory instances, favorites, collection goals, lifetime statistics, and the latest 100 openings. The previous `vladcase_state_v1` snapshot and the oldest `vladcase_*` keys are migrated without deleting the source data. Invalid data is preserved and mutations are blocked until it is repaired.
 
 Every mutation takes the origin-wide Web Lock, re-reads storage, validates the transition, writes one snapshot, and only then updates the UI. Opening saves the charge and reward before its reveal. Leaving or refreshing does not lose that item. Sales use instance IDs and cannot credit a missing item. Browser storage failures leave the previous snapshot intact.
 
