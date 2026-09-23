@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, getRarityColor } from '@/lib/utils';
 import { RARITIES } from '@/lib/stats';
-import { BarChart3, ArrowLeft, Flame, Trophy } from 'lucide-react';
+import { BarChart3, ArrowLeft, Trophy } from 'lucide-react';
 
 export default function StatsPage() {
   const { stats, history, isLoaded } = useApp();
