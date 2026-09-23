@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useEconomy } from '@/hooks/useEconomy';
 import { useInventory } from '@/hooks/useInventory';
 import { formatCurrency } from '@/lib/utils';
-import { PlusCircle, Package, Shield, Sparkles } from 'lucide-react';
+import {
+  ExternalLink,
+  Package,
+  PlusCircle,
+  Shield,
+  Sparkles,
+} from 'lucide-react';
 
 export const Navbar = () => {
   const { balance, level, addBalance, isLoaded } = useEconomy();
@@ -44,6 +50,15 @@ export const Navbar = () => {
                 </span>
               )}
             </Link>
+            <a
+              href="https://upgrader.pro/en"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-text-secondary hover:text-white transition-colors"
+            >
+              <span>Upgrader</span>
+              <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+            </a>
           </div>
         </div>
 

@@ -9,8 +9,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-white/10 py-8 mt-20 bg-surface-dark/60 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 text-center text-text-muted text-xs space-y-2">
+        <div className="max-w-7xl mx-auto px-4 text-center text-text-muted text-xs space-y-3">
           <p>© {new Date().getFullYear()} VLADCASE. High fidelity CS2 case opening & economy simulator.</p>
+          <a
+            href="https://upgrader.pro/en"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-medium text-text-secondary transition-colors hover:text-accent"
+          >
+            Upgrader
+            <span aria-hidden="true">↗</span>
+          </a>
           <p className="text-[11px] text-text-muted/70">Virtual items simulator. All currency and drop simulations are purely for entertainment. Generated artwork is illustrative, not an exact in-game preview.</p>
         </div>
       </footer>

@@ -7,6 +7,17 @@ test.beforeEach(async ({ page }) => {
     throw error;
   });
 });
+test('Upgrader is available as a safe external link', async ({ page }) => {
+  await page.goto('/');
+  const links = page.getByRole('link', { name: 'Upgrader' });
+  await expect(links).toHaveCount(2);
+  for (const link of await links.all()) {
+    await expect(link).toHaveAttribute('href', 'https://upgrader.pro/en');
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  }
+});
+
 test('opening saves before animation, survives reload, and sells once', async ({
   page,
 }) => {
