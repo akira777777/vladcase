@@ -9,7 +9,7 @@ import {
 
 describe('upgradeChance', () => {
   it('applies the house edge to the value ratio', () => {
-    expect(upgradeChance(9500, 10000)).toBeCloseTo(95 * HOUSE_EDGE, 9);
+    expect(upgradeChance(9000, 10000)).toBeCloseTo(90 * HOUSE_EDGE, 9);
     expect(upgradeChance(5000, 10000)).toBeCloseTo(47.5, 9);
   });
 

@@ -359,6 +359,7 @@ export function transition(
   let next = state;
   let awarded: Item | undefined;
   let items: Item[] | undefined;
+  let upgrade: UpgradeOutcome | undefined;
   switch (command.type) {
     case 'open':
     case 'openMany': {
@@ -546,8 +547,7 @@ export function transition(
           },
         };
       }
-      awardedChance = chance;
-      wonUpgrade = won;
+      upgrade = { chance, won, inputItem: target };
       break;
     }
     case 'reset':
@@ -557,7 +557,7 @@ export function transition(
   validateSnapshot(next);
   return {
     state: next,
-    result: { ok: true, item: awarded, items },
+    result: { ok: true, item: awarded, items, upgrade },
   };
 }
 

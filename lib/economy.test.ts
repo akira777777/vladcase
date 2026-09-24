@@ -9,6 +9,7 @@ import {
   transition,
   validateSnapshot,
 } from './economy';
+import { upgradeChance } from './upgrader';
 
 const env = { random: () => 0, now: () => 100, id: () => 'instance-1' };
 const sample = CASES[0];
@@ -199,5 +200,90 @@ describe('saved progress', () => {
         balanceCents: Number.MAX_SAFE_INTEGER + 1,
       })
     ).toThrow();
+  });
+});
+
+describe('upgrade transactions', () => {
+  const targetItem = {
+    ...sample.items[0],
+    id: 'upgrade-target',
+    name: 'Target Skin',
+    demoValue: 40,
+  };
+
+  function prepared() {
+    const saved = storage();
+    let n = 0;
+    const id = () => `instance-${++n}`;
+    return { saved, env: { ...env, id } };
+  }
+
+  it('rolls the outcome inside the transaction and awards the target on a win', () => {
+    const { saved, env: localEnv } = prepared();
+    commit(saved, { type: 'open', caseData: sample }, localEnv);
+    const input = readSnapshot(saved).inventory[0];
+    const inputCents = Math.round(input.demoValue * 100);
+    const change = commit(
+      saved,
+      { type: 'upgrade', inputId: input.instanceId!, targetItem },
+      { ...localEnv, random: () => 0.001 }
+    );
+    expect(change.result.ok).toBe(true);
+    if (!change.result.ok) return;
+    expect(change.result.upgrade).toMatchObject({
+      won: true,
+      chance: upgradeChance(inputCents, 4000),
+    });
+    const next = readSnapshot(saved);
+    expect(next.inventory).toHaveLength(1);
+    expect(next.inventory[0]).toMatchObject({
+      id: 'upgrade-target',
+      instanceId: 'instance-2',
+    });
+    expect(next.stats.rarityCounts[targetItem.rarity]).toBe(1);
+  });
+
+  it('burns the input and records removed value on a loss', () => {
+    const { saved, env: localEnv } = prepared();
+    commit(saved, { type: 'open', caseData: sample }, localEnv);
+    const input = readSnapshot(saved).inventory[0];
+    const inputCents = Math.round(input.demoValue * 100);
+    const change = commit(
+      saved,
+      { type: 'upgrade', inputId: input.instanceId!, targetItem },
+      { ...localEnv, random: () => 0.9 }
+    );
+    expect(change.result.ok).toBe(true);
+    if (!change.result.ok) return;
+    expect(change.result.upgrade?.won).toBe(false);
+    const next = readSnapshot(saved);
+    expect(next.inventory).toHaveLength(0);
+    expect(next.stats.removedValueCents).toBe(inputCents);
+    expect(next.xp).toBe(75);
+  });
+
+  it('rejects targets that are not worth more without mutating storage', () => {
+    const { saved, env: localEnv } = prepared();
+    commit(saved, { type: 'open', caseData: sample }, localEnv);
+    const input = readSnapshot(saved).inventory[0];
+    const before = saved.getItem(STORAGE_KEY);
+    const change = commit(saved, {
+      type: 'upgrade',
+      inputId: input.instanceId!,
+      targetItem: { ...targetItem, demoValue: 0.01 },
+    });
+    expect(change.result).toMatchObject({ ok: false, code: 'invalid' });
+    expect(saved.getItem(STORAGE_KEY)).toBe(before);
+  });
+
+  it('rejects a missing input without mutating storage', () => {
+    const saved = storage();
+    const change = commit(saved, {
+      type: 'upgrade',
+      inputId: 'ghost',
+      targetItem,
+    });
+    expect(change.result).toMatchObject({ ok: false, code: 'missing' });
+    expect(saved.getItem(STORAGE_KEY)).toBeNull();
   });
 });

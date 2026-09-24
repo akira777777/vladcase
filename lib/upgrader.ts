@@ -1,4 +1,5 @@
 import type { OpeningEnvironment } from './caseLogic';
+import type { Item } from '../types';
 
 /**
  * Payout factor applied to the raw value ratio, mirroring the house edge
