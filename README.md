@@ -27,6 +27,12 @@ Every mutation takes the origin-wide Web Lock, re-reads storage, validates the t
 
 Use HTTPS or localhost: Web Locks are required. Other tabs receive storage updates. This is client-owned simulator state, not a trusted ledger or real-money system.
 
+## Upgrader
+
+The `/upgrade` page is an in-app skin upgrader in the style of OpenCase sites. Pick one inventory item and one catalog target worth more; the win chance is `(input / target) × 95%`, clamped to 1–90% (`HOUSE_EDGE`, `MIN_CHANCE_PERCENT`, `MAX_CHANCE_PERCENT` in `lib/upgrader.ts`). The wheel animates the outcome, but the roll happens inside the storage transaction (`transition`, command type `'upgrade'`): the input is removed and the target is awarded atomically before the animation starts, so a refresh or crash never loses or duplicates an upgrade. Wins add the target's rarity to lifetime stats and 200 XP; losses burn the input, record `removedValueCents`, and grant 25 XP. The result is returned as `Result.upgrade: { chance, won, inputItem }`. The old external `upgrader.pro` links in the navbar and footer were replaced by this page.
+
+The Statistics page tracks upgrader performance: `upgradeWins`, `upgradeLosses`, win rate, and `upgradeWageredCents` are recorded per upgrade and rendered in an "Upgrader performance" section. These counters were added after v2 shipped, so older saved snapshots load normally and the counters are backfilled to zero by the snapshot validator (`optionalCount` in `lib/economy.ts`).
+
 ## Artwork
 
 All 24 generated assets (19 skins and 5 cases) are committed in `public/assets/` as 640-pixel WebP images. They were generated individually with the built-in image generation tool. Exact prompts and original output filenames are recorded in `scripts/art-sources.json`. Old inventory image URLs are mapped to local artwork at display time without rewriting existing saved records.

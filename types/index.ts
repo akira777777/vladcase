@@ -56,4 +56,10 @@ export interface LifetimeStats {
   currentRareStreak: number;
   bestRareStreak: number;
   bestDropInstanceId: string | null;
+  /** Number of successful upgrader exchanges. */
+  upgradeWins: number;
+  /** Number of failed upgrades (input consumed). */
+  upgradeLosses: number;
+  /** Sum of input value cents offered to the upgrader across wins and losses. */
+  upgradeWageredCents: number;
 }

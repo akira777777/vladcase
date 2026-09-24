@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/ui/Navbar';
 import { Shield } from 'lucide-react';
 
@@ -17,15 +18,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <p>© {new Date().getFullYear()} VLADCASE. High fidelity CS2 case opening & economy simulator.</p>
           <div>
-            <a
-              href="https://upgrader.pro/en"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/upgrade"
               className="inline-flex items-center gap-1.5 font-semibold text-text-secondary transition-colors hover:text-accent py-1 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5"
             >
               <span>Upgrader</span>
-              <span aria-hidden="true">↗</span>
-            </a>
+              <span aria-hidden="true">→</span>
+            </Link>
           </div>
           <p className="text-[11px] text-text-muted/70 max-w-xl mx-auto leading-relaxed">
             Virtual items simulator. All currency and drop simulations are purely for entertainment. Generated artwork is illustrative, not an exact in-game preview.

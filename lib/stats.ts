@@ -34,6 +34,9 @@ export function emptyStats(): LifetimeStats {
     currentRareStreak: 0,
     bestRareStreak: 0,
     bestDropInstanceId: null,
+    upgradeWins: 0,
+    upgradeLosses: 0,
+    upgradeWageredCents: 0,
   };
 }
 

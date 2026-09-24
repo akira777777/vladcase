@@ -223,6 +223,7 @@ describe('upgrade transactions', () => {
     commit(saved, { type: 'open', caseData: sample }, localEnv);
     const input = readSnapshot(saved).inventory[0];
     const inputCents = Math.round(input.demoValue * 100);
+    const baseline = readSnapshot(saved).stats.rarityCounts[targetItem.rarity];
     const change = commit(
       saved,
       { type: 'upgrade', inputId: input.instanceId!, targetItem },
@@ -240,7 +241,7 @@ describe('upgrade transactions', () => {
       id: 'upgrade-target',
       instanceId: 'instance-2',
     });
-    expect(next.stats.rarityCounts[targetItem.rarity]).toBe(1);
+    expect(next.stats.rarityCounts[targetItem.rarity]).toBe(baseline + 1);
   });
 
   it('burns the input and records removed value on a loss', () => {
@@ -285,5 +286,36 @@ describe('upgrade transactions', () => {
     });
     expect(change.result).toMatchObject({ ok: false, code: 'missing' });
     expect(saved.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('backfills upgrade counters for snapshots saved before them', () => {
+    const legacy = {
+      ...initialState(),
+      stats: {
+        ...initialState().stats,
+        upgradeWins: undefined,
+        upgradeLosses: undefined,
+        upgradeWageredCents: undefined,
+      },
+    };
+    // Simulate an old snapshot: delete the new keys after JSON round-trip.
+    const raw = JSON.parse(JSON.stringify({ ...legacy, stats: { ...legacy.stats } }));
+    delete raw.stats.upgradeWins;
+    delete raw.stats.upgradeLosses;
+    delete raw.stats.upgradeWageredCents;
+    const saved = storage({ [STORAGE_KEY]: JSON.stringify(raw) });
+    const loaded = readSnapshot(saved);
+    expect(loaded.stats.upgradeWins).toBe(0);
+    expect(loaded.stats.upgradeLosses).toBe(0);
+    expect(loaded.stats.upgradeWageredCents).toBe(0);
+  });
+
+  it('rejects negative upgrade counters', () => {
+    const broken = {
+      ...initialState(),
+      stats: { ...initialState().stats, upgradeWins: -1 },
+    };
+    const saved = storage({ [STORAGE_KEY]: JSON.stringify(broken) });
+    expect(() => readSnapshot(saved)).toThrow();
   });
 });

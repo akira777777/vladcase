@@ -7,16 +7,100 @@ test.beforeEach(async ({ page }) => {
     throw error;
   });
 });
-test('Upgrader is available as a safe external link', async ({ page }) => {
+test('Upgrader navigation is internal and leads to the upgrade page', async ({
+  page,
+}) => {
   await page.goto('/');
   const links = page.getByRole('link', { name: 'Upgrader' });
-  await expect(links).toHaveCount(2);
+  await expect(links.first()).toBeVisible();
   for (const link of await links.all()) {
-    await expect(link).toHaveAttribute('href', 'https://upgrader.pro/en');
-    await expect(link).toHaveAttribute('target', '_blank');
-    await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    await expect(link).toHaveAttribute('href', '/upgrade');
   }
+  await links.first().click();
+  await expect(
+    page.getByRole('heading', { name: /Upgrade your/ })
+  ).toBeVisible();
 });
+
+test('upgrader commits the outcome before animation and survives reload', async ({
+  page,
+  context,
+}) => {
+  // Deterministic roll: with input $0.50 and Glock-18 | Water Elemental
+  // ($24.50) the chance is (50/2450)*95 ≈ 1.94%, so 0.05*100 = 5 > 1.94 →
+  // deterministic LOSS. The test asserts the loss path end-to-end.
+  await page.addInitScript(() => {
+    Math.random = () => 0.05;
+  });
+  await page.addInitScript(
+    ({ key, input }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          version: 2,
+          balanceCents: 100000,
+          xp: 0,
+          history: [],
+          stats: {
+            totalOpens: 0,
+            totalSpentCents: 0,
+            totalDropValueCents: 0,
+            realizedCents: 0,
+            removedValueCents: 0,
+            rarityCounts: { Consumer: 1, Industrial: 0, 'Mil-Spec': 0, Restricted: 0, Classified: 0, Covert: 0, 'Special Item': 0 },
+            caseCounts: {},
+            currentRareStreak: 0,
+            bestRareStreak: 0,
+            bestDropInstanceId: null,
+          },
+          favoriteIds: [],
+          goalIds: [],
+          inventory: [{ ...input, instanceId: 'seed-input', unboxedAt: 1 }],
+        })
+      );
+    },
+    { key, input: ITEMS.find((item) => item.id === 'item-nova-sanddune')! }
+  );
+  await page.goto('/upgrade');
+  // Select the seeded input item.
+  await page.getByRole('button', { name: 'Nova | Sand Dune' }).first().click();
+  // M4A4 | Howl costs $4,200 — the 0.85 -> 4.00 plan cannot reach it; pick a
+  // reachable target instead: Glock-18 | Water Elemental ($24.50) via All list.
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByRole('button', { name: 'Glock-18 | Water Elemental' }).click();
+  await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  // The wheel spins on the page (~4.2s) before the result dialog opens.
+  const dialog = page.getByRole('dialog', { name: /^Upgrade (won|lost)/ });
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+  await expect(
+    dialog.getByText(/Upgrade (successful|failed)/)
+  ).toBeVisible();
+  // Outcome already committed: the input was removed from saved storage.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (k) =>
+          JSON.parse(localStorage.getItem(k) || '{}').inventory?.length ?? -1,
+        key
+      )
+    )
+    .toBe(0);
+  // A fresh page in the same context shares localStorage but does not re-run
+  // the seed init script, so this proves the outcome persisted on disk.
+  const second = await context.newPage();
+  await second.goto('/inventory');
+  await expect(
+    second.getByRole('heading', { name: 'No items in your inventory' })
+  ).toBeVisible();
+  // Lifetime upgrader stats reflect the committed loss.
+  await second.goto('/stats');
+  await expect(second.getByRole('heading', { name: 'Upgrader performance' })).toBeVisible();
+  await expect(second.getByText('Losses', { exact: true })).toBeVisible();
+  await expect(
+    second.locator('section', { hasText: 'Upgrader performance' }).getByText('1', { exact: true }).first()
+  ).toBeVisible();
+});
+
 
 test('opening saves before animation, survives reload, and sells once', async ({
   page,

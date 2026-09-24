@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, ExternalLink, Flame, History, Menu, Package, PlusCircle, Settings, Shield, Sparkles, Volume2, VolumeX, X } from 'lucide-react';
+import { BarChart3, Flame, History, Menu, Package, PlusCircle, Settings, Shield, Sparkles, TrendingUp, Volume2, VolumeX, X } from 'lucide-react';
 import { useEconomy } from '@/hooks/useEconomy';
 import { useInventory } from '@/hooks/useInventory';
 import { usePreferences } from '@/hooks/usePreferences';
@@ -38,8 +38,8 @@ export const Navbar = () => {
             <Link href="/stats" className={navClass('/stats')}><BarChart3 className="w-4 h-4" />Stats</Link>
             <Link href="/history" className={navClass('/history')}><History className="w-4 h-4" />History</Link>
             <Link href="/contracts" className={navClass('/contracts')}><Flame className="w-4 h-4 text-amber-400" />Contracts</Link>
+            <Link href="/upgrade" className={navClass('/upgrade')}><TrendingUp className="w-4 h-4 text-emerald-400" />Upgrader</Link>
             <Link href="/settings" className={navClass('/settings')}><Settings className="w-4 h-4" />Settings</Link>
-            <a href="https://upgrader.pro/en" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-text-secondary hover:text-accent transition-colors py-1.5 px-2 rounded-lg hover:bg-white/5">Upgrader <ExternalLink className="w-3 h-3" aria-hidden="true" /></a>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -49,7 +49,7 @@ export const Navbar = () => {
           <button onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} className="lg:hidden p-2 rounded-xl bg-white/5 border border-white/10 text-white">{menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}</button>
         </div>
       </div>
-      {menuOpen && <div className="lg:hidden border-t border-white/10 bg-background/95 px-4 py-3 shadow-2xl"><div className="grid grid-cols-2 gap-2">{[['/', 'Cases'], ['/inventory', `Inventory (${inventory.length})`], ['/stats', 'Statistics'], ['/history', 'History'], ['/contracts', 'Contracts'], ['/settings', 'Settings']].map(([href, label]) => <Link key={href} href={href} className={navClass(href)}>{label}</Link>)}<a href="https://upgrader.pro/en" target="_blank" rel="noopener noreferrer" className="col-span-2 flex items-center gap-2 text-text-secondary hover:text-accent px-2 py-2">Upgrader <ExternalLink className="w-3 h-3" /></a><button onClick={() => setPreference('soundEnabled', !soundEnabled)} className="col-span-2 flex items-center gap-2 text-text-secondary px-2 py-2 text-left">{soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}{soundEnabled ? 'Mute sounds' : 'Unmute sounds'}</button></div></div>}
+      {menuOpen && <div className="lg:hidden border-t border-white/10 bg-background/95 px-4 py-3 shadow-2xl"><div className="grid grid-cols-2 gap-2">{[['/', 'Cases'], ['/inventory', `Inventory (${inventory.length})`], ['/upgrade', 'Upgrader'], ['/stats', 'Statistics'], ['/history', 'History'], ['/contracts', 'Contracts'], ['/settings', 'Settings']].map(([href, label]) => <Link key={href} href={href} className={navClass(href)}>{label}</Link>)}<button onClick={() => setPreference('soundEnabled', !soundEnabled)} className="col-span-2 flex items-center gap-2 text-text-secondary px-2 py-2 text-left">{soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}{soundEnabled ? 'Mute sounds' : 'Unmute sounds'}</button></div></div>}
     </nav>
   );
 };

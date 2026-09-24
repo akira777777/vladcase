@@ -154,6 +154,11 @@ function stats(value: unknown): LifetimeStats {
     )
       throw new Error('Invalid lifetime statistics');
   }
+  // Upgrade counters were introduced after v2 shipped; older snapshots are
+  // backfilled with zeros instead of being rejected.
+  const upgradeWins = optionalCount(value.upgradeWins);
+  const upgradeLosses = optionalCount(value.upgradeLosses);
+  const upgradeWageredCents = optionalCount(value.upgradeWageredCents);
   if (
     typeof value.bestDropInstanceId !== 'string' &&
     value.bestDropInstanceId !== null
@@ -173,7 +178,19 @@ function stats(value: unknown): LifetimeStats {
       (count as number) < 0
     )
       throw new Error('Invalid case statistics');
-  return value as unknown as LifetimeStats;
+  return {
+    ...(value as unknown as LifetimeStats),
+    upgradeWins,
+    upgradeLosses,
+    upgradeWageredCents,
+  };
+}
+
+function optionalCount(value: unknown): number {
+  if (value === undefined || value === null) return 0;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+    throw new Error('Invalid lifetime statistics');
+  return value;
 }
 
 function collection(value: unknown): Item[] {
@@ -531,6 +548,10 @@ export function transition(
           stats: {
             ...state.stats,
             rarityCounts,
+            upgradeWins: safeTotal(state.stats.upgradeWins + 1),
+            upgradeWageredCents: safeTotal(
+              state.stats.upgradeWageredCents + inputCents
+            ),
           },
         };
         awarded = reward;
@@ -543,6 +564,10 @@ export function transition(
             ...state.stats,
             removedValueCents: safeTotal(
               state.stats.removedValueCents + inputCents
+            ),
+            upgradeLosses: safeTotal(state.stats.upgradeLosses + 1),
+            upgradeWageredCents: safeTotal(
+              state.stats.upgradeWageredCents + inputCents
             ),
           },
         };
