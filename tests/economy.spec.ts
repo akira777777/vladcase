@@ -104,9 +104,9 @@ test('upgrader commits the outcome before animation and survives reload', async 
 test('won upgrade chains into the next round with the reward preselected', async ({
   page,
 }) => {
-  // Deterministic win: 0.1 < 1.94% chance for 0.50 -> 24.50.
+  // Deterministic win: 0.001 < 1.94% chance for 0.50 -> 24.50.
   await page.addInitScript(() => {
-    Math.random = () => 0.1;
+    Math.random = () => 0.001;
   });
   await page.addInitScript(
     ({ key, input }) => {
@@ -149,11 +149,9 @@ test('won upgrade chains into the next round with the reward preselected', async
   // Chaining: "Upgrade Again" must preselect the won Glock as the next input.
   await dialog.getByRole('button', { name: 'Upgrade Again' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  const givePanel = page
-    .locator('div', { hasText: /^You give$/ })
-    .locator('..');
-  await expect(givePanel).toContainText('Glock-18 | Water Elemental');
-  await expect(givePanel).toContainText('$24.50');
+  await expect(
+    page.getByText('Glock-18 | Water Elemental · $24.50')
+  ).toBeVisible();
   // The target panel offers pricier targets for the $24.50 input immediately.
   await expect(
     page.getByRole('button', { name: 'AK-47 | Redline' }).first()
