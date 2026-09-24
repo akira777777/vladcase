@@ -236,10 +236,16 @@ const browser = await chromium.launch();
   check('chain: wagered sums both inputs (50+2450)', saved?.stats?.upgradeWageredCents === 2500, `=${saved?.stats?.upgradeWageredCents}`);
   check('chain: final xp 200+25', saved?.xp === 225, `=${saved?.xp}`);
 
-  await page.goto(`${base}/stats`);
-  const statsText = await page.locator('section', { hasText: 'Upgrader performance' }).textContent();
+  // A fresh page in the same context shares localStorage without re-running
+  // this page's seed init script, so the stats reflect the committed data.
+  const statsPage = await context.newPage();
+  await statsPage.goto(`${base}/stats`);
+  const statsText = await statsPage
+    .locator('section', { hasText: 'Upgrader performance' })
+    .textContent();
   check('chain: stats page shows wagered $25.00', statsText?.includes('$25.00') ?? false);
   check('chain: stats page shows 50% win rate', /50%/.test(statsText ?? ''), statsText?.slice(0, 160));
+  check('chain: stats page shows wins=1 losses=1', /Wins1/.test(statsText ?? '') && /Losses1/.test(statsText ?? ''), statsText?.slice(0, 120));
   check('chain: no console/page errors', problems.length === 0, problems.join(' | ').slice(0, 300));
   await context.close();
 }
