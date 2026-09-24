@@ -21,8 +21,22 @@ const MULTIPLIERS = [2, 5, 10, 20, 50] as const;
 type Phase =
   | { kind: 'idle' }
   | { kind: 'confirm'; input: Item; target: Item; chance: number }
-  | { kind: 'spinning'; input: Item; target: Item; chance: number; won: boolean }
-  | { kind: 'result'; input: Item; target: Item; chance: number; won: boolean };
+  | {
+      kind: 'spinning';
+      input: Item;
+      target: Item;
+      chance: number;
+      won: boolean;
+      rewardInstanceId?: string;
+    }
+  | {
+      kind: 'result';
+      input: Item;
+      target: Item;
+      chance: number;
+      won: boolean;
+      rewardInstanceId?: string;
+    };
 
 export default function UpgradePage() {
   const { inventory } = useInventory();
@@ -134,6 +148,7 @@ export default function UpgradePage() {
       target: targetItem,
       chance: result.upgrade.chance,
       won: result.upgrade.won,
+      rewardInstanceId: result.item?.instanceId,
     });
   };
 
@@ -154,8 +169,15 @@ export default function UpgradePage() {
   const upgradeAgain = () => {
     playClickSound();
     setPhase({ kind: 'idle' });
-    setTargetId(null);
     setActionError(null);
+    // Chaining: after a win the reward becomes the next input (it is the only
+    // item the player just gained). After a loss the burned input is gone.
+    if (phase.kind === 'result' && phase.won && phase.rewardInstanceId) {
+      setInputId(phase.rewardInstanceId);
+    } else {
+      setInputId(null);
+    }
+    setTargetId(null);
   };
 
   return (

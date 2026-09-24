@@ -169,6 +169,81 @@ const browser = await chromium.launch();
   await context.close();
 }
 
+// ── Scenario 6: chained upgrades, balance untouched, stats page reflects both ─
+{
+  // Deterministic roll alternates win (0.001) / loss (0.9) per navigation.
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', (error) => problems.push(`pageerror: ${error}`));
+  page.on('console', (message) => {
+    if (message.type() === 'error') problems.push(`console: ${message.text()}`);
+  });
+  let roll = 0.001;
+  void roll; // reserved for per-upgrade overrides if needed
+  await page.addInitScript(`
+    Math.random = () => 0.001;
+    localStorage.setItem('vladcase_state_v2', JSON.stringify({
+      version: 2,
+      balanceCents: 100000,
+      xp: 0,
+      history: [],
+      stats: {
+        totalOpens: 0, totalSpentCents: 0, totalDropValueCents: 0,
+        realizedCents: 0, removedValueCents: 0,
+        rarityCounts: { Consumer: 0, Industrial: 0, 'Mil-Spec': 0, Restricted: 0, Classified: 0, Covert: 0, 'Special Item': 0 },
+        caseCounts: {}, currentRareStreak: 0, bestRareStreak: 0, bestDropInstanceId: null,
+      },
+      favoriteIds: [],
+      goalIds: [],
+      inventory: [{
+        id: 'item-nova-sanddune', name: 'Nova | Sand Dune', weaponType: 'Shotgun',
+        image: '/assets/item-nova-sanddune.webp', rarity: 'Consumer',
+        demoValue: 0.5, dropChance: 50, instanceId: 'seed-input', unboxedAt: 1,
+      }],
+    }));
+  `);
+  await page.goto(`${base}/upgrade`);
+
+  // Upgrade #1: Nova ($0.50) → Glock ($24.50), deterministic win.
+  await page.getByRole('button', { name: 'Nova | Sand Dune' }).first().click();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByRole('button', { name: 'Glock-18 | Water Elemental' }).click();
+  await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  const firstDialog = page.getByRole('dialog');
+  await firstDialog.getByText('Upgrade successful!').waitFor({ timeout: 10000 });
+
+  // Chain: upgrade the won Glock again (input stays selected as the new item).
+  await firstDialog.getByRole('button', { name: 'Upgrade Again' }).click();
+  await page.waitForTimeout(200);
+  // After "Upgrade Again" the input selection is kept; pick a pricier target.
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  // Override the roll to a deterministic loss for upgrade #2.
+  await page.evaluate(() => {
+    Math.random = () => 0.9;
+  });
+  await page.getByRole('button', { name: 'AK-47 | Redline' }).click();
+  await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  const secondDialog = page.getByRole('dialog');
+  await secondDialog.getByText('Upgrade failed').waitFor({ timeout: 10000 });
+  check('chain: second upgrade resolves as loss', await secondDialog.isVisible());
+  await secondDialog.getByRole('button', { name: 'Close' }).click();
+  await page.waitForTimeout(200);
+
+  const saved = await state(page);
+  check('chain: balance never charged by upgrades', saved?.balanceCents === 100000, `=${saved?.balanceCents}`);
+  check('chain: wins=1 losses=1', saved?.stats?.upgradeWins === 1 && saved?.stats?.upgradeLosses === 1, `w=${saved?.stats?.upgradeWins} l=${saved?.stats?.upgradeLosses}`);
+  check('chain: wagered sums both inputs (50+2450)', saved?.stats?.upgradeWageredCents === 2500, `=${saved?.stats?.upgradeWageredCents}`);
+  check('chain: final xp 200+25', saved?.xp === 225, `=${saved?.xp}`);
+
+  await page.goto(`${base}/stats`);
+  const statsText = await page.locator('section', { hasText: 'Upgrader performance' }).textContent();
+  check('chain: stats page shows wagered $25.00', statsText?.includes('$25.00') ?? false);
+  check('chain: stats page shows 50% win rate', /50%/.test(statsText ?? ''), statsText?.slice(0, 160));
+  check('chain: no console/page errors', problems.length === 0, problems.join(' | ').slice(0, 300));
+  await context.close();
+}
+
 await browser.close();
 
 const failed = results.filter((entry) => !entry.ok);
