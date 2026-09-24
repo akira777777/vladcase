@@ -7,6 +7,11 @@ import type {
 } from '../types';
 import { openCase, type OpeningEnvironment } from './caseLogic';
 import {
+  upgradeChance,
+  rollUpgrade,
+  type UpgradeOutcome,
+} from './upgrader';
+import {
   emptyStats,
   RARITIES,
   RARITY_RANK,
@@ -16,6 +21,8 @@ import {
 export const STORAGE_KEY = 'vladcase_state_v2';
 export const LEGACY_STORAGE_KEY = 'vladcase_state_v1';
 export const HISTORY_LIMIT = 100;
+
+export type { UpgradeOutcome };
 
 export interface Snapshot {
   version: 2;
@@ -258,10 +265,10 @@ export type Command =
   | { type: 'sellAll' | 'reset' }
   | { type: 'toggleFavorite' | 'toggleGoal'; id: string }
   | { type: 'contract'; inputIds: string[]; rewardItem: Item }
-  | { type: 'upgrade'; inputId: string; targetItem: Item; won: boolean };
+  | { type: 'upgrade'; inputId: string; targetItem: Item };
 
 export type Result =
-  | { ok: true; item?: Item; items?: Item[] }
+  | { ok: true; item?: Item; items?: Item[]; upgrade?: UpgradeOutcome }
   | {
       ok: false;
       code: 'funds' | 'missing' | 'storage' | 'unavailable' | 'invalid';
@@ -489,10 +496,24 @@ export function transition(
           },
         };
       }
+      const inputCents = cents(target.demoValue);
+      const targetCents = cents(command.targetItem.demoValue);
+      if (targetCents <= inputCents) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'invalid',
+            message: 'Upgrade target must be worth more than the item.',
+          },
+        };
+      }
+      const chance = upgradeChance(inputCents, targetCents);
+      const won = rollUpgrade(chance, env);
       const remainingInventory = state.inventory.filter(
         (entry) => entry.instanceId !== command.inputId
       );
-      if (command.won) {
+      if (won) {
         const reward: Item = {
           ...command.targetItem,
           instanceId:
@@ -520,11 +541,13 @@ export function transition(
           stats: {
             ...state.stats,
             removedValueCents: safeTotal(
-              state.stats.removedValueCents + cents(target.demoValue)
+              state.stats.removedValueCents + inputCents
             ),
           },
         };
       }
+      awardedChance = chance;
+      wonUpgrade = won;
       break;
     }
     case 'reset':
