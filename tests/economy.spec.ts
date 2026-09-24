@@ -101,6 +101,65 @@ test('upgrader commits the outcome before animation and survives reload', async 
   ).toBeVisible();
 });
 
+test('won upgrade chains into the next round with the reward preselected', async ({
+  page,
+}) => {
+  // Deterministic win: 0.1 < 1.94% chance for 0.50 -> 24.50.
+  await page.addInitScript(() => {
+    Math.random = () => 0.1;
+  });
+  await page.addInitScript(
+    ({ key, input }) => {
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          version: 2,
+          balanceCents: 100000,
+          xp: 0,
+          history: [],
+          stats: {
+            totalOpens: 0,
+            totalSpentCents: 0,
+            totalDropValueCents: 0,
+            realizedCents: 0,
+            removedValueCents: 0,
+            rarityCounts: { Consumer: 1, Industrial: 0, 'Mil-Spec': 0, Restricted: 0, Classified: 0, Covert: 0, 'Special Item': 0 },
+            caseCounts: {},
+            currentRareStreak: 0,
+            bestRareStreak: 0,
+            bestDropInstanceId: null,
+          },
+          favoriteIds: [],
+          goalIds: [],
+          inventory: [{ ...input, instanceId: 'seed-input', unboxedAt: 1 }],
+        })
+      );
+    },
+    { key, input: ITEMS.find((item) => item.id === 'item-nova-sanddune')! }
+  );
+  await page.goto('/upgrade');
+  await page.getByRole('button', { name: 'Nova | Sand Dune' }).first().click();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.getByRole('button', { name: 'Glock-18 | Water Elemental' }).click();
+  await page.getByRole('button', { name: 'Upgrade', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: /Upgrade won/ });
+  await expect(dialog.getByText('Upgrade successful!')).toBeVisible({
+    timeout: 10000,
+  });
+  // Chaining: "Upgrade Again" must preselect the won Glock as the next input.
+  await dialog.getByRole('button', { name: 'Upgrade Again' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const givePanel = page
+    .locator('div', { hasText: /^You give$/ })
+    .locator('..');
+  await expect(givePanel).toContainText('Glock-18 | Water Elemental');
+  await expect(givePanel).toContainText('$24.50');
+  // The target panel offers pricier targets for the $24.50 input immediately.
+  await expect(
+    page.getByRole('button', { name: 'AK-47 | Redline' }).first()
+  ).toBeVisible();
+});
+
 
 test('opening saves before animation, survives reload, and sells once', async ({
   page,
