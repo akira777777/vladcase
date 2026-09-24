@@ -36,3 +36,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# local e2e run logs
+e2e-*.log
