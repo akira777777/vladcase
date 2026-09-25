@@ -165,7 +165,7 @@ export default function CaseOpenPage({ caseId }: { caseId: string }) {
               {caseItem.category} case
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-text-muted uppercase tracking-wider">
-              <ShieldCheck className="w-3 h-3 text-emerald-400" /> Provably fair
+              <ShieldCheck className="w-3 h-3 text-emerald-400" /> Transparent odds
             </span>
           </div>
           <h1 className="mt-1.5 text-3xl sm:text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">

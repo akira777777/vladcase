@@ -76,17 +76,17 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Fairness & Provability Banner */}
-      <section className="panel p-6 space-y-3 relative overflow-hidden" aria-label="Provable fairness">
+      {/* Transparency & persistence banner */}
+      <section className="panel p-6 space-y-3 relative overflow-hidden" aria-label="Transparent local simulation">
         <div className="flex items-center gap-2 pb-2 border-b border-white/[0.06]">
           <ShieldCheck className="w-5 h-5 text-emerald-400" />
           <h2 className="text-sm font-display font-black text-white uppercase tracking-wider">
-            Provable Fairness &amp; Atomic Odds
+            Transparent Odds &amp; Atomic Saves
           </h2>
         </div>
         <p className="text-xs text-text-secondary leading-relaxed">
-          Every unboxing roll on VLADCASE executes under an origin-wide browser Web Lock (<code className="text-brand-300 font-mono">navigator.locks</code>).
-          The item reward and wallet state are committed atomically to encrypted local storage before the roulette begins.
+          Every unboxing action on VLADCASE executes under an origin-wide browser Web Lock (<code className="text-brand-300 font-mono">navigator.locks</code>).
+          The item reward and wallet state are committed together to browser local storage before the roulette begins. Local data is validated, but it is not encrypted.
           Leaving the page or refreshing will never forfeit an item or duplicate virtual balance.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
@@ -99,7 +99,7 @@ export default function SettingsPage() {
             <p className="text-emerald-400 font-bold mt-0.5 font-mono">vladcase_state_v2</p>
           </div>
           <div className="p-3 rounded-lg bg-surface-dark border border-white/[0.06]">
-            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">House Edge</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Upgrader Edge</span>
             <p className="text-gold font-bold mt-0.5 font-mono">5.0% Fixed</p>
           </div>
         </div>

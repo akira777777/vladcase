@@ -238,7 +238,7 @@ export default function UpgradePage() {
               Upgrade <span className="metallic">Arena</span>
             </h1>
             <p className="mt-2 text-xs sm:text-sm text-text-secondary max-w-xl">
-              Risk your skin for a high-value upgrade. Calculated provably fair odds
+              Risk your skin for a high-value upgrade. Transparent calculated odds
               with dynamic precision roulette.
             </p>
           </div>

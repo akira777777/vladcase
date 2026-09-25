@@ -7,8 +7,11 @@ import VladcaseLogo from '@/components/ui/VladcaseLogo';
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-ink-900 text-text-primary selection:bg-brand/40 flex flex-col relative overflow-x-hidden">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-black">
+        Skip to main content
+      </a>
       <AppHeader />
-      <main className="pt-[60px] pb-[72px] lg:pb-0 flex-1">
+      <main id="main-content" className="pt-[60px] pb-[72px] lg:pb-0 flex-1">
         {children}
       </main>
       <footer className="border-t border-white/[0.06] mt-16 bg-[#0A0C12] relative overflow-hidden">
@@ -50,7 +53,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="pt-4 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-text-muted">
             <span>© {new Date().getFullYear()} VLADCASE — Local CS2 simulator.</span>
-            <span className="font-mono">provably fair · transparent odds · local saves</span>
+            <span className="font-mono">transparent odds · atomic actions · local saves</span>
           </div>
         </div>
       </footer>

@@ -83,6 +83,7 @@ export default function HomeContent() {
 
   return (
     <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-8 sm:space-y-10">
+      <h1 className="sr-only">VLADCASE CS2 Case Opening Simulator</h1>
       <LiveDropFeed drops={recentDrops.length > 0 ? recentDrops : undefined} />
       <EventHero />
 
