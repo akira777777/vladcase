@@ -68,8 +68,20 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
 
   const [spinState, setSpinState] = useState<'idle' | 'spinning' | 'won' | 'lost'>('idle');
 
-  const clampedChance = Math.max(0, Math.min(100, chancePercent));
+  // Preserve last valid positive chance and multiplier so wheel graphics NEVER drop to 0% mid-spin or transition
+  const lastChanceRef = useRef(chancePercent > 0 ? chancePercent : 20);
+  if (chancePercent > 0) {
+    lastChanceRef.current = chancePercent;
+  }
+  const displayChance = chancePercent > 0 ? chancePercent : lastChanceRef.current;
+  const clampedChance = Math.max(0, Math.min(100, displayChance));
   const greenAngle = (clampedChance / 100) * 360;
+
+  const lastMultiplierRef = useRef(targetMultiplier);
+  if (targetMultiplier && targetMultiplier > 0) {
+    lastMultiplierRef.current = targetMultiplier;
+  }
+  const displayMultiplier = targetMultiplier || lastMultiplierRef.current;
 
   // Track geometry (viewBox 0 0 400 400)
   const CX = 200;
@@ -448,9 +460,9 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.18)_0%,transparent_75%)]" />
 
             {/* Multiplier / Target Tag */}
-            {targetMultiplier ? (
+            {displayMultiplier ? (
               <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-cyan-300 mb-1">
-                {targetMultiplier.toFixed(2)}× MULTIPLIER
+                {displayMultiplier.toFixed(2)}× MULTIPLIER
               </span>
             ) : (
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-text-muted mb-1">

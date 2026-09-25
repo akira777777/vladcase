@@ -89,33 +89,36 @@ export default function UpgradePage() {
     };
   }, [phase, reducedMotion]);
 
-  const inputItem = useMemo(
-    () => inventory.find((entry) => entry.instanceId === inputId) ?? null,
-    [inventory, inputId]
-  );
+  // Active sacrifice skin: locked to phase during confirm/spinning/result even after item is consumed from inventory
+  const activeInputItem = useMemo(() => {
+    if (phase.kind !== 'idle') return phase.input;
+    return inventory.find((entry) => entry.instanceId === inputId) ?? null;
+  }, [phase, inventory, inputId]);
 
-  const targetItem = useMemo(
-    () => ITEMS.find((entry) => entry.id === targetId) ?? null,
-    [targetId]
-  );
+  // Active target skin: locked to phase during confirm/spinning/result
+  const activeTargetItem = useMemo(() => {
+    if (phase.kind !== 'idle') return phase.target;
+    return ITEMS.find((entry) => entry.id === targetId) ?? null;
+  }, [phase, targetId]);
 
   const chance = useMemo(() => {
-    if (!inputItem || !targetItem) return null;
-    const inputCents = Math.round(inputItem.demoValue * 100);
-    const targetCents = Math.round(targetItem.demoValue * 100);
+    if (phase.kind !== 'idle') return phase.chance;
+    if (!activeInputItem || !activeTargetItem) return null;
+    const inputCents = Math.round(activeInputItem.demoValue * 100);
+    const targetCents = Math.round(activeTargetItem.demoValue * 100);
     if (targetCents <= inputCents) return null;
     return upgradeChance(inputCents, targetCents);
-  }, [inputItem, targetItem]);
+  }, [phase, activeInputItem, activeTargetItem]);
 
   const targetRatio = useMemo(() => {
-    if (!inputItem || !targetItem || inputItem.demoValue <= 0) return null;
-    return targetItem.demoValue / inputItem.demoValue;
-  }, [inputItem, targetItem]);
+    if (!activeInputItem || !activeTargetItem || activeInputItem.demoValue <= 0) return null;
+    return activeTargetItem.demoValue / activeInputItem.demoValue;
+  }, [activeInputItem, activeTargetItem]);
 
   const potentialProfit = useMemo(() => {
-    if (!inputItem || !targetItem) return null;
-    return Math.max(0, targetItem.demoValue - inputItem.demoValue);
-  }, [inputItem, targetItem]);
+    if (!activeInputItem || !activeTargetItem) return null;
+    return Math.max(0, activeTargetItem.demoValue - activeInputItem.demoValue);
+  }, [activeInputItem, activeTargetItem]);
 
   // Filtered inventory items
   const filteredInventory = useMemo(() => {
@@ -126,22 +129,22 @@ export default function UpgradePage() {
 
   // Catalog targets near input * multiplier, sorted by value distance.
   const suggestedTargets = useMemo(() => {
-    if (!inputItem) return [];
-    const desired = inputItem.demoValue * multiplier;
-    return ITEMS.filter((entry) => entry.demoValue > inputItem.demoValue)
+    if (!activeInputItem) return [];
+    const desired = activeInputItem.demoValue * multiplier;
+    return ITEMS.filter((entry) => entry.demoValue > activeInputItem.demoValue)
       .sort(
         (a, b) =>
           Math.abs(a.demoValue - desired) - Math.abs(b.demoValue - desired)
       )
       .slice(0, 18);
-  }, [inputItem, multiplier]);
+  }, [activeInputItem, multiplier]);
 
   const allTargets = useMemo(
     () =>
       ITEMS.filter(
-        (entry) => entry.demoValue > (inputItem?.demoValue ?? 0)
+        (entry) => entry.demoValue > (activeInputItem?.demoValue ?? 0)
       ).sort((a, b) => a.demoValue - b.demoValue),
-    [inputItem]
+    [activeInputItem]
   );
 
   const rawTargets = showAllTargets ? allTargets : suggestedTargets;
@@ -153,6 +156,7 @@ export default function UpgradePage() {
   }, [rawTargets, targetSearch]);
 
   const selectInput = (item: Item) => {
+    if (phase.kind !== 'idle') return;
     playClickSound();
     setInputId(item.instanceId ?? null);
     setTargetId(null);
@@ -160,17 +164,21 @@ export default function UpgradePage() {
   };
 
   const selectTarget = (item: Item) => {
+    if (phase.kind !== 'idle') return;
     playClickSound();
     setTargetId(item.id);
     setPhase({ kind: 'idle' });
   };
 
   const startUpgrade = async () => {
-    if (!inputItem || !targetItem || chance === null || phase.kind !== 'idle')
+    if (!activeInputItem || !activeTargetItem || chance === null || phase.kind !== 'idle')
       return;
     playCaseOpenSound();
-    setPhase({ kind: 'confirm', input: inputItem, target: targetItem, chance });
-    const result = await upgradeItem(inputItem.instanceId!, targetItem);
+    const currentInput = activeInputItem;
+    const currentTarget = activeTargetItem;
+    const currentChance = chance;
+    setPhase({ kind: 'confirm', input: currentInput, target: currentTarget, chance: currentChance });
+    const result = await upgradeItem(currentInput.instanceId!, currentTarget);
     if (!result.ok || !result.upgrade) {
       setPhase({ kind: 'idle' });
       setActionError(result.ok ? 'Upgrade result is unavailable.' : result.message);
@@ -178,8 +186,8 @@ export default function UpgradePage() {
     }
     setPhase({
       kind: 'spinning',
-      input: inputItem,
-      target: targetItem,
+      input: currentInput,
+      target: currentTarget,
       chance: result.upgrade.chance,
       won: result.upgrade.won,
       rewardInstanceId: result.item?.instanceId,
@@ -285,15 +293,17 @@ export default function UpgradePage() {
                 <Shield className="w-3.5 h-3.5 text-brand-300" />
                 Your Skin
               </span>
-              {inputItem && (
+              {activeInputItem && (
                 <button
                   type="button"
+                  disabled={phase.kind !== 'idle'}
                   onClick={() => {
+                    if (phase.kind !== 'idle') return;
                     playClickSound();
                     setInputId(null);
                     setTargetId(null);
                   }}
-                  className="text-[10px] font-bold text-text-secondary hover:text-white transition-colors"
+                  className="text-[10px] font-bold text-text-secondary hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Change
                 </button>
@@ -302,34 +312,34 @@ export default function UpgradePage() {
 
             <div
               className={`w-full h-80 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-between p-5 relative overflow-hidden ${
-                inputItem
+                activeInputItem
                   ? 'bg-surface-dark/90 shadow-xl'
                   : 'bg-white/[0.02] border-dashed border-white/20'
               }`}
               style={{
-                borderColor: inputItem
-                  ? `${getRarityColor(inputItem.rarity)}60`
+                borderColor: activeInputItem
+                  ? `${getRarityColor(activeInputItem.rarity)}60`
                   : undefined,
-                boxShadow: inputItem
-                  ? `0 0 35px ${getRarityColor(inputItem.rarity)}20`
+                boxShadow: activeInputItem
+                  ? `0 0 35px ${getRarityColor(activeInputItem.rarity)}20`
                   : undefined,
               }}
             >
-              {inputItem ? (
+              {activeInputItem ? (
                 <>
                   <div className="w-full flex justify-between items-center z-10">
                     <span
                       className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                       style={{
-                        backgroundColor: `${getRarityColor(inputItem.rarity)}20`,
-                        color: getRarityColor(inputItem.rarity),
-                        border: `1px solid ${getRarityColor(inputItem.rarity)}40`,
+                        backgroundColor: `${getRarityColor(activeInputItem.rarity)}20`,
+                        color: getRarityColor(activeInputItem.rarity),
+                        border: `1px solid ${getRarityColor(activeInputItem.rarity)}40`,
                       }}
                     >
-                      {inputItem.rarity}
+                      {activeInputItem.rarity}
                     </span>
                     <span className="text-xs font-black text-emerald-400 font-display">
-                      {formatCurrency(inputItem.demoValue)}
+                      {formatCurrency(activeInputItem.demoValue)}
                     </span>
                   </div>
 
@@ -338,15 +348,15 @@ export default function UpgradePage() {
                     className="absolute inset-0 opacity-20 pointer-events-none"
                     style={{
                       background: `radial-gradient(circle at center, ${getRarityColor(
-                        inputItem.rarity
+                        activeInputItem.rarity
                       )} 0%, transparent 70%)`,
                     }}
                   />
 
                   <div className="my-auto py-2 z-10 transition-transform duration-300 hover:scale-105">
                     <ItemImage
-                      src={inputItem.image}
-                      alt={inputItem.name}
+                      src={activeInputItem.image}
+                      alt={activeInputItem.name}
                       width={180}
                       height={120}
                       className="max-h-28 object-contain mx-auto drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]"
@@ -355,7 +365,7 @@ export default function UpgradePage() {
 
                   <div className="w-full text-center z-10">
                     <h3 className="text-sm font-black text-white truncate font-display">
-                      {inputItem.name}
+                      {activeInputItem.name}
                     </h3>
                     <p className="text-[11px] text-text-muted mt-0.5">
                       Selected Sacrifice
@@ -420,7 +430,7 @@ export default function UpgradePage() {
               chancePercent={chance ?? 0}
               spinning={phase.kind === 'spinning'}
               outcome={
-                phase.kind === 'spinning'
+                phase.kind === 'spinning' || phase.kind === 'result'
                   ? phase.won
                     ? 'win'
                     : 'lose'
@@ -437,8 +447,8 @@ export default function UpgradePage() {
                 type="button"
                 onClick={() => void startUpgrade()}
                 disabled={
-                  !inputItem ||
-                  !targetItem ||
+                  !activeInputItem ||
+                  !activeTargetItem ||
                   chance === null ||
                   phase.kind !== 'idle' ||
                   !isLoaded
@@ -446,15 +456,15 @@ export default function UpgradePage() {
                 className="relative w-full py-4 rounded-2xl font-black text-base uppercase tracking-wider transition-all duration-300 disabled:cursor-not-allowed overflow-hidden group shadow-2xl flex items-center justify-center gap-2"
                 style={{
                   background:
-                    !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    !activeInputItem || !activeTargetItem || chance === null || phase.kind !== 'idle' || !isLoaded
                       ? 'rgba(255, 255, 255, 0.05)'
                       : 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%)',
                   boxShadow:
-                    !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    !activeInputItem || !activeTargetItem || chance === null || phase.kind !== 'idle' || !isLoaded
                       ? 'none'
                       : '0 0 35px rgba(6, 182, 212, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3)',
                   color:
-                    !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    !activeInputItem || !activeTargetItem || chance === null || phase.kind !== 'idle' || !isLoaded
                       ? 'rgba(255, 255, 255, 0.3)'
                       : '#ffffff',
                 }}
@@ -464,7 +474,7 @@ export default function UpgradePage() {
                   {phase.kind === 'spinning' ? 'Upgrading…' : 'Upgrade'}
                 </span>
                 {/* Glow sweep animation */}
-                {!(!inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded) && (
+                {!(!activeInputItem || !activeTargetItem || chance === null || phase.kind !== 'idle' || !isLoaded) && (
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                     style={{
@@ -488,14 +498,16 @@ export default function UpgradePage() {
                 <Flame className="w-3.5 h-3.5 text-gold" />
                 Target Skin
               </span>
-              {targetItem && (
+              {activeTargetItem && (
                 <button
                   type="button"
+                  disabled={phase.kind !== 'idle'}
                   onClick={() => {
+                    if (phase.kind !== 'idle') return;
                     playClickSound();
                     setTargetId(null);
                   }}
-                  className="text-[10px] font-bold text-text-secondary hover:text-white transition-colors"
+                  className="text-[10px] font-bold text-text-secondary hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Change
                 </button>
@@ -504,34 +516,34 @@ export default function UpgradePage() {
 
             <div
               className={`w-full h-80 rounded-2xl border transition-all duration-300 flex flex-col items-center justify-between p-5 relative overflow-hidden ${
-                targetItem
+                activeTargetItem
                   ? 'bg-surface-dark/90 shadow-xl'
                   : 'bg-white/[0.02] border-dashed border-white/20'
               }`}
               style={{
-                borderColor: targetItem
-                  ? `${getRarityColor(targetItem.rarity)}60`
+                borderColor: activeTargetItem
+                  ? `${getRarityColor(activeTargetItem.rarity)}60`
                   : undefined,
-                boxShadow: targetItem
-                  ? `0 0 35px ${getRarityColor(targetItem.rarity)}20`
+                boxShadow: activeTargetItem
+                  ? `0 0 35px ${getRarityColor(activeTargetItem.rarity)}20`
                   : undefined,
               }}
             >
-              {targetItem ? (
+              {activeTargetItem ? (
                 <>
                   <div className="w-full flex justify-between items-center z-10">
                     <span
                       className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
                       style={{
-                        backgroundColor: `${getRarityColor(targetItem.rarity)}20`,
-                        color: getRarityColor(targetItem.rarity),
-                        border: `1px solid ${getRarityColor(targetItem.rarity)}40`,
+                        backgroundColor: `${getRarityColor(activeTargetItem.rarity)}20`,
+                        color: getRarityColor(activeTargetItem.rarity),
+                        border: `1px solid ${getRarityColor(activeTargetItem.rarity)}40`,
                       }}
                     >
-                      {targetItem.rarity}
+                      {activeTargetItem.rarity}
                     </span>
                     <span className="text-xs font-black text-cyan-400 font-display">
-                      {formatCurrency(targetItem.demoValue)}
+                      {formatCurrency(activeTargetItem.demoValue)}
                     </span>
                   </div>
 
@@ -540,15 +552,15 @@ export default function UpgradePage() {
                     className="absolute inset-0 opacity-20 pointer-events-none"
                     style={{
                       background: `radial-gradient(circle at center, ${getRarityColor(
-                        targetItem.rarity
+                        activeTargetItem.rarity
                       )} 0%, transparent 70%)`,
                     }}
                   />
 
                   <div className="my-auto py-2 z-10 transition-transform duration-300 hover:scale-105">
                     <ItemImage
-                      src={targetItem.image}
-                      alt={targetItem.name}
+                      src={activeTargetItem.image}
+                      alt={activeTargetItem.name}
                       width={180}
                       height={120}
                       className="max-h-28 object-contain mx-auto drop-shadow-[0_15px_25px_rgba(0,0,0,0.8)]"
@@ -557,7 +569,7 @@ export default function UpgradePage() {
 
                   <div className="w-full text-center z-10">
                     <h3 className="text-sm font-black text-white truncate font-display">
-                      {targetItem.name}
+                      {activeTargetItem.name}
                     </h3>
                     <div className="flex items-center justify-center gap-2 mt-1">
                       {chance !== null && (
@@ -641,12 +653,13 @@ export default function UpgradePage() {
           ) : (
             <div className="flex-1 overflow-y-auto pr-1.5 grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filteredInventory.map((item) => {
-                const isSelected = item.instanceId === inputId;
+                const isSelected = item.instanceId === (activeInputItem?.instanceId ?? inputId);
                 const color = getRarityColor(item.rarity);
                 return (
                   <button
                     key={item.instanceId}
                     type="button"
+                    disabled={phase.kind !== 'idle'}
                     onClick={() => selectInput(item)}
                     aria-pressed={isSelected}
                     style={{
@@ -762,7 +775,7 @@ export default function UpgradePage() {
             </div>
           </div>
 
-          {!inputItem ? (
+          {!activeInputItem ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-text-muted gap-3">
               <Zap className="w-12 h-12 opacity-30 text-gold" />
               <p className="text-sm font-semibold text-white">Select an inventory skin first</p>
@@ -777,10 +790,10 @@ export default function UpgradePage() {
           ) : (
             <div className="flex-1 overflow-y-auto pr-1.5 grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filteredTargets.map((item) => {
-                const isSelected = item.id === targetId;
+                const isSelected = item.id === (activeTargetItem?.id ?? targetId);
                 const color = getRarityColor(item.rarity);
                 const targetChance = (() => {
-                  const inputCents = Math.round(inputItem.demoValue * 100);
+                  const inputCents = Math.round(activeInputItem.demoValue * 100);
                   const targetCents = Math.round(item.demoValue * 100);
                   if (targetCents <= inputCents) return null;
                   return upgradeChance(inputCents, targetCents);
@@ -790,6 +803,7 @@ export default function UpgradePage() {
                   <button
                     key={item.id}
                     type="button"
+                    disabled={phase.kind !== 'idle'}
                     onClick={() => selectTarget(item)}
                     aria-pressed={isSelected}
                     style={{
