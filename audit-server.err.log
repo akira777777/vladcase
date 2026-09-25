@@ -1,0 +1,2 @@
+npm notice run vladcase@0.1.0 start
+npm notice run next start --hostname 127.0.0.1 --port 3101

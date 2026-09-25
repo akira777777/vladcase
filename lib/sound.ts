@@ -298,11 +298,64 @@ class SoundManager {
       });
     } catch {}
   }
+  // Wheel spin whoosh
+  public playWheelWhoosh() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(260, now + 0.25);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.8);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.12, now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.9);
+    } catch {}
+  }
+
+  // Wheel upgrade lose sound: dramatic metallic thud
+  public playLose() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } catch {}
+  }
 }
 
 export const sound = new SoundManager();
 export const playRouletteTick = (pitch?: number) => sound.playTick(pitch);
 export const playWinSound = (rarity: string) => sound.playWin(rarity);
+export const playLoseSound = () => sound.playLose();
+export const playWheelWhoosh = () => sound.playWheelWhoosh();
 export const playCaseOpenSound = () => sound.playCaseOpen();
 export const playCashSound = () => sound.playCash();
 export const playDepositSound = () => sound.playDeposit();
