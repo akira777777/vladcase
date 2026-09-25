@@ -564,6 +564,21 @@ export function transition(
       next = { ...state, goalIds: toggleId(state.goalIds, command.id) };
       break;
     case 'contract': {
+      const uniqueInputIds = new Set(command.inputIds);
+      if (
+        command.inputIds.length < 3 ||
+        command.inputIds.length > 10 ||
+        uniqueInputIds.size !== command.inputIds.length
+      ) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'invalid',
+            message: 'Trade-up contracts require 3 to 10 unique items.',
+          },
+        };
+      }
       const inputs = state.inventory.filter((entry) =>
         command.inputIds.includes(entry.instanceId!)
       );
@@ -574,6 +589,19 @@ export function transition(
             ok: false,
             code: 'missing',
             message: 'Some items selected for trade-up are missing.',
+          },
+        };
+      }
+      const highestInputRank = Math.max(
+        ...inputs.map((entry) => RARITY_RANK[entry.rarity])
+      );
+      if (RARITY_RANK[command.rewardItem.rarity] !== highestInputRank + 1) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'invalid',
+            message: 'The contract reward must be exactly one rarity above the inputs.',
           },
         };
       }

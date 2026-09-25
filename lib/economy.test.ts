@@ -415,3 +415,33 @@ describe('upgrade transactions', () => {
     expect(() => readSnapshot(saved)).toThrow();
   });
 });
+
+describe('trade-up contracts', () => {
+  const inputItem = sample.items[0];
+  const inventory = Array.from({ length: 3 }, (_, index) => ({
+    ...inputItem,
+    instanceId: `contract-${index}`,
+    unboxedAt: index,
+  }));
+  const prepared = { ...initialState(), inventory };
+
+  it('rejects contracts with fewer than three unique inputs', () => {
+    const change = transition(prepared, {
+      type: 'contract',
+      inputIds: ['contract-0', 'contract-1'],
+      rewardItem: { ...sample.items[1], rarity: 'Industrial' },
+    });
+    expect(change.result).toMatchObject({ ok: false, code: 'invalid' });
+    expect(change.state).toBe(prepared);
+  });
+
+  it('rejects rewards that are not exactly one rarity above the inputs', () => {
+    const change = transition(prepared, {
+      type: 'contract',
+      inputIds: inventory.map((item) => item.instanceId!),
+      rewardItem: { ...inputItem },
+    });
+    expect(change.result).toMatchObject({ ok: false, code: 'invalid' });
+    expect(change.state).toBe(prepared);
+  });
+});

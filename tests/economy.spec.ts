@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ITEMS } from '../data/mockData';
+import { CASES, ITEMS } from '../data/mockData';
 
 const key = 'vladcase_state_v2';
 test.beforeEach(async ({ page }) => {
@@ -34,6 +34,11 @@ test('every route has one page heading and unique element ids', async ({ page })
   }
 });
 
+test('case page title applies the site name once', async ({ page }) => {
+  await page.goto('/cases/case-budget-starter');
+  await expect(page).toHaveTitle('Starter Recruit | VLADCASE');
+});
+
 test('battle is charged and persisted before its animation completes', async ({ page }) => {
   await page.addInitScript(() => {
     Math.random = () => 0;
@@ -41,6 +46,7 @@ test('battle is charged and persisted before its animation completes', async ({ 
   await page.goto('/battles');
   await page.getByRole('button', { name: /Start 1v1 Battle/i }).click();
 
+  const expectedBalance = 100000 - Math.round((CASES[0].price * 2 + CASES[1].price) * 100);
   await expect.poll(() => page.evaluate((storageKey) => {
     const state = JSON.parse(localStorage.getItem(storageKey) || '{}');
     return {
@@ -48,10 +54,10 @@ test('battle is charged and persisted before its animation completes', async ({ 
       historyCount: state.history?.length,
       inventoryCount: state.inventory?.length,
     };
-  }, key)).toEqual({ balanceCents: 91300, historyCount: 3, inventoryCount: 3 });
+  }, key)).toEqual({ balanceCents: expectedBalance, historyCount: 3, inventoryCount: 3 });
 
   await page.reload();
-  await expect(page.getByText('$913.00', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(`$${(expectedBalance / 100).toFixed(2)}`, { exact: true }).first()).toBeVisible();
 });
 
 test('daily bonus cannot be claimed again after reload', async ({ page }) => {

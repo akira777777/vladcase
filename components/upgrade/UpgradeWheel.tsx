@@ -13,10 +13,11 @@ interface UpgradeWheelProps {
   isTurbo?: boolean;
 }
 
-const EDGE_MARGIN = 1.5;
+const EDGE_MARGIN = 2.0;
 
 /**
  * Builds an SVG path for an annular sector (donut slice).
+ * Angles: 0° is 12 o'clock, increasing clockwise.
  */
 function getAnnularSectorPath(
   cx: number,
@@ -66,7 +67,6 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
   completionRef.current = onComplete;
 
   const [spinState, setSpinState] = useState<'idle' | 'spinning' | 'won' | 'lost'>('idle');
-  const [needleTick, setNeedleTick] = useState(false);
 
   const clampedChance = Math.max(0, Math.min(100, chancePercent));
   const greenAngle = (clampedChance / 100) * 360;
@@ -75,7 +75,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
   const CX = 200;
   const CY = 200;
   const R_OUTER = 178;
-  const R_INNER = 112;
+  const R_INNER = 114;
 
   // Spin parameters
   const spinDuration = isTurbo ? 1.8 : 3.8;
@@ -98,7 +98,9 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
     const tickTimeouts: ReturnType<typeof setTimeout>[] = [];
     const jitter = Math.random();
 
-    // Calculate exact landing angle on the disc so the top needle points to it.
+    // The wheel stays static. The needle rotates clockwise from its current angle.
+    // 0° is 12 o'clock (the start of the green zone).
+    // Green zone is [0, greenAngle]. Loss zone is [greenAngle, 360].
     let landing: number;
     if (outcome === 'win') {
       const low = Math.min(EDGE_MARGIN, greenAngle * 0.1);
@@ -110,8 +112,9 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
       landing = low + (high - low) * jitter;
     }
 
+    // Solve for target angle continuing from the needle's current rotation
     const currentMod = ((rotationRef.current % 360) + 360) % 360;
-    const delta = (((360 - currentMod - landing) % 360) + 360) % 360;
+    const delta = (((landing - currentMod) % 360) + 360) % 360;
     const target = rotationRef.current + spinTurns * 360 + delta;
 
     const completeSoon = () => {
@@ -134,22 +137,20 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
       }
 
       // Schedule realistic decelerating ratchet ticks synchronized with spin curve
-      const totalTicks = isTurbo ? 16 : 30;
+      const totalTicks = isTurbo ? 16 : 32;
       let accumulatedTime = 0;
       for (let i = 0; i < totalTicks; i++) {
-        // Cubic deceleration step
         const progress = i / totalTicks;
-        const stepDelay = (isTurbo ? 30 : 45) + Math.pow(progress, 2.5) * (isTurbo ? 220 : 380);
+        const stepDelay = (isTurbo ? 28 : 42) + Math.pow(progress, 2.4) * (isTurbo ? 220 : 380);
         accumulatedTime += stepDelay;
 
         if (accumulatedTime >= (spinDuration - 0.1) * 1000) break;
 
-        const pitch = 1.25 - progress * 0.55; // 1.25 down to 0.70
+        const pitch = 1.25 - progress * 0.55; // Drops from 1.25 to 0.70
         tickTimeouts.push(
           setTimeout(() => {
             if (!cancelled) {
               playRouletteTick(pitch);
-              setNeedleTick((prev) => !prev);
             }
           }, accumulatedTime)
         );
@@ -178,14 +179,14 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
     };
   }, [spinning, outcome, clampedChance, greenAngle, controls, reducedMotion, isTurbo, spinDuration, spinTurns]);
 
-  // Tick graduation marks (100 ticks = 1% per tick)
+  // Tick graduation marks (100 ticks = 1% per tick, totally stationary on the wheel)
   const ticks = useMemo(() => {
     return Array.from({ length: 100 }, (_, i) => {
       const angleDeg = i * 3.6;
       const angleRad = ((angleDeg - 90) * Math.PI) / 180;
       const isMajor = i % 10 === 0;
       const isMedium = i % 5 === 0;
-      const tickLength = isMajor ? 14 : isMedium ? 10 : 6;
+      const tickLength = isMajor ? 13 : isMedium ? 9 : 5;
       const r1 = R_OUTER;
       const r2 = R_OUTER - tickLength;
 
@@ -202,17 +203,19 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
     });
   }, []);
 
+  // Win Sector path (starts at 0° / 12 o'clock and stays in place!)
   const winSectorPath = useMemo(() => {
     if (greenAngle <= 0.05) return null;
     return getAnnularSectorPath(CX, CY, R_INNER, R_OUTER, 0, greenAngle);
   }, [greenAngle]);
 
+  // Loss Sector path (starts at greenAngle and completes to 360°)
   const loseSectorPath = useMemo(() => {
     if (greenAngle >= 359.95) return null;
     return getAnnularSectorPath(CX, CY, R_INNER, R_OUTER, greenAngle, 360);
   }, [greenAngle]);
 
-  // End boundary laser position
+  // Laser boundary at greenAngle
   const laserEndCoord = useMemo(() => {
     const rad = ((greenAngle - 90) * Math.PI) / 180;
     return {
@@ -227,30 +230,26 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
     <div className="relative w-80 h-80 sm:w-96 sm:h-96 mx-auto select-none flex items-center justify-center">
       {/* Dynamic ambient energy backglow */}
       <div
-        className={`absolute inset-[-12%] rounded-full blur-3xl pointer-events-none transition-all duration-700 ${
+        className={`absolute inset-[-10%] rounded-full blur-3xl pointer-events-none transition-all duration-700 ${
           spinState === 'won'
             ? 'bg-emerald-500/35 scale-105'
             : spinState === 'lost'
             ? 'bg-rose-500/25 scale-95'
             : spinState === 'spinning'
-            ? 'bg-brand/30 animate-pulse'
+            ? 'bg-cyan-500/20 animate-pulse'
             : 'bg-brand/15'
         }`}
       />
 
       {/* Outer Tactical Bezel Chassis */}
-      <div className="absolute inset-0 rounded-full p-[3px] bg-gradient-to-b from-white/15 via-white/5 to-black/60 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.2)]">
+      <div className="absolute inset-0 rounded-full p-[3px] bg-gradient-to-b from-white/15 via-white/5 to-black/70 shadow-[0_20px_50px_rgba(0,0,0,0.85),inset_0_1px_1px_rgba(255,255,255,0.2)]">
         <div className="w-full h-full rounded-full bg-[#0a0c13] relative overflow-hidden border border-white/[0.08]">
-          {/* Carbon texture simulation */}
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#8b5cf6_1px,transparent_1px)] [background-size:12px_12px]" />
         </div>
       </div>
 
-      {/* Rotating Disc Track */}
-      <motion.div
-        animate={controls}
-        className="relative w-[92%] h-[92%] rounded-full overflow-hidden shadow-[inset_0_0_40px_rgba(0,0,0,0.95)]"
-      >
+      {/* STATIC Base Wheel: Green Win Sector and Dark Loss Sector stay fixed in place! */}
+      <div className="relative w-[92%] h-[92%] rounded-full overflow-hidden shadow-[inset_0_0_40px_rgba(0,0,0,0.95)]">
         <svg
           viewBox="0 0 400 400"
           className="w-full h-full"
@@ -267,9 +266,9 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
 
             {/* Lose sector gradient: Carbon obsidian */}
             <linearGradient id="loseGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#171923" />
+              <stop offset="0%" stopColor="#161822" />
               <stop offset="50%" stopColor="#0f1118" />
-              <stop offset="100%" stopColor="#141722" />
+              <stop offset="100%" stopColor="#13151f" />
             </linearGradient>
 
             {/* Glowing laser filter */}
@@ -282,7 +281,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             </filter>
           </defs>
 
-          {/* Loss Sector */}
+          {/* Loss Sector (Stationary) */}
           {loseSectorPath && (
             <path
               d={loseSectorPath}
@@ -292,7 +291,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             />
           )}
 
-          {/* Win Sector */}
+          {/* Win Sector (Stationary at 0° to greenAngle!) */}
           {winSectorPath && (
             <path
               d={winSectorPath}
@@ -302,7 +301,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             />
           )}
 
-          {/* Inner & Outer track rail rings */}
+          {/* Track rail rings */}
           <circle
             cx={CX}
             cy={CY}
@@ -320,7 +319,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             strokeWidth="1.5"
           />
 
-          {/* Precision graduation ticks */}
+          {/* Stationary graduation ticks */}
           {ticks.map((t) => {
             const inWinZone = t.angleDeg <= greenAngle;
             return (
@@ -348,7 +347,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             );
           })}
 
-          {/* Laser boundary at 0° (Start) */}
+          {/* Stationary Start Laser Line (12 o'clock, 0°) */}
           {greenAngle > 0 && (
             <line
               x1={CX}
@@ -361,7 +360,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             />
           )}
 
-          {/* Laser boundary at greenAngle (End) */}
+          {/* Stationary End Laser Line (at greenAngle) */}
           {greenAngle > 0 && greenAngle < 360 && (
             <line
               x1={laserEndCoord.x1.toFixed(2)}
@@ -374,63 +373,78 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
             />
           )}
         </svg>
-      </motion.div>
-
-      {/* Fixed High-Precision Needle at Top (12 o'clock) */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center">
-        {/* Needle Housing & Pivot */}
-        <motion.div
-          animate={
-            spinning
-              ? {
-                  y: needleTick ? [-1.5, 0] : [0, -1.5],
-                  rotate: needleTick ? [-2, 2, 0] : [2, -2, 0],
-                }
-              : { y: 0, rotate: 0 }
-          }
-          transition={{ duration: 0.06 }}
-          className="flex flex-col items-center filter drop-shadow-[0_0_12px_rgba(34,211,238,0.9)]"
-        >
-          {/* Mechanical Needle Anchor */}
-          <div className="w-5 h-2 rounded-full bg-gradient-to-r from-zinc-300 via-white to-zinc-300 border border-zinc-500 shadow-md" />
-
-          {/* Needle Arrowhead */}
-          <svg width="26" height="34" viewBox="0 0 26 34" fill="none">
-            {/* Outer metallic pointer */}
-            <path
-              d="M 13 32 L 2 6 Q 13 2 24 6 Z"
-              fill="url(#needleMetal)"
-              stroke="rgba(255,255,255,0.8)"
-              strokeWidth="1.2"
-            />
-            {/* Luminous Neon Core */}
-            <path
-              d="M 13 29 L 5 8 Q 13 5 21 8 Z"
-              fill="#22d3ee"
-              opacity="0.9"
-            />
-            {/* Laser focal tip */}
-            <circle cx="13" cy="27" r="2.5" fill="#ffffff" />
-
-            <defs>
-              <linearGradient id="needleMetal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#e2e8f0" />
-                <stop offset="50%" stopColor="#94a3b8" />
-                <stop offset="100%" stopColor="#38bdf8" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </motion.div>
-
-        {/* Downward laser projection beam */}
-        <div className="w-0.5 h-6 bg-gradient-to-b from-cyan-400 via-cyan-400/80 to-transparent -mt-1 blur-[0.5px]" />
       </div>
 
-      {/* Cybernetic Center HUD Display */}
+      {/* ROTATING LASER NEEDLE: Sweeps around the circle and stops at the random outcome! */}
+      <motion.div
+        animate={controls}
+        className="absolute inset-0 pointer-events-none z-30 flex items-center justify-center"
+        style={{ transformOrigin: '50% 50%' }}
+      >
+        {/* Needle indicator arm positioned at 12 o'clock (0°), pointing outwards across the track */}
+        <div className="absolute top-[4.5%] left-1/2 -translate-x-1/2 flex flex-col items-center">
+          {/* Laser Pointer Head */}
+          <div className="relative flex flex-col items-center filter drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]">
+            {/* Arrowhead diamond touching the outer track */}
+            <svg width="22" height="28" viewBox="0 0 22 28" fill="none">
+              {/* Outer metallic pointer arrow */}
+              <path
+                d="M 11 26 L 2 6 Q 11 1 20 6 Z"
+                fill="url(#needleMetalGradient)"
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="1.2"
+              />
+              {/* Glowing neon core */}
+              <path
+                d="M 11 23 L 5 8 Q 11 4 17 8 Z"
+                fill={
+                  spinState === 'won'
+                    ? '#34d399'
+                    : spinState === 'lost'
+                    ? '#f43f5e'
+                    : '#22d3ee'
+                }
+              />
+              {/* Laser focal dot */}
+              <circle cx="11" cy="22" r="2.5" fill="#ffffff" />
+
+              <defs>
+                <linearGradient id="needleMetalGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f8fafc" />
+                  <stop offset="50%" stopColor="#94a3b8" />
+                  <stop offset="100%" stopColor="#38bdf8" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Glowing laser ray beam spanning the donut track */}
+            <div
+              className="w-[3px] h-14 -mt-1 rounded-full"
+              style={{
+                background: `linear-gradient(to bottom, ${
+                  spinState === 'won'
+                    ? '#34d399'
+                    : spinState === 'lost'
+                    ? '#f43f5e'
+                    : '#22d3ee'
+                }, transparent)`,
+                boxShadow: `0 0 8px ${
+                  spinState === 'won'
+                    ? '#34d399'
+                    : spinState === 'lost'
+                    ? '#f43f5e'
+                    : '#22d3ee'
+                }`,
+              }}
+            />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Cybernetic Center HUD Display (Stationary, clear & high-contrast) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
         <div className="relative w-44 h-44 sm:w-52 sm:h-52 rounded-full p-[2px] bg-gradient-to-b from-white/20 via-brand/40 to-black/80 shadow-[0_10px_35px_rgba(0,0,0,0.9),inset_0_0_25px_rgba(0,0,0,0.8)]">
           <div className="w-full h-full rounded-full bg-[#0d0f17]/95 border border-white/10 backdrop-blur-md flex flex-col items-center justify-center p-3 relative overflow-hidden">
-            {/* Subtle radar sweep or pulse */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(139,92,246,0.18)_0%,transparent_75%)]" />
 
             {/* Multiplier / Target Tag */}
@@ -444,7 +458,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
               </span>
             )}
 
-            {/* Hero Percentage Display */}
+            {/* Percentage Display */}
             <div className="flex items-baseline justify-center gap-0.5">
               <span
                 className={`text-4xl sm:text-5xl font-black font-display tracking-tight transition-colors duration-300 ${
@@ -462,7 +476,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
               </span>
             </div>
 
-            {/* Dynamic Status Pill */}
+            {/* Status Pill */}
             <div className="mt-2">
               {spinState === 'spinning' ? (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand/20 border border-brand/50 text-[10px] font-black uppercase tracking-wider text-brand-300 animate-pulse">
