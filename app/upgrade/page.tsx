@@ -248,11 +248,17 @@ export default function UpgradePage() {
                       type="button"
                       onClick={() => selectInput(item)}
                       aria-pressed={isSelected}
-                      style={{ borderColor: isSelected ? '#22d3ee' : `${color}25` }}
-                      className={`p-2.5 rounded-xl border bg-surface-dark/80 cursor-pointer flex flex-col items-center justify-between text-center transition-all ${
+                      style={{
+                        borderColor: isSelected ? '#22d3ee' : `${color}40`,
+                        boxShadow: isSelected
+                          ? `0 0 20px ${color}60, inset 0 0 20px ${color}20`
+                          : `0 0 0px transparent`,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                      className={`p-2.5 rounded-xl border bg-surface-dark/80 cursor-pointer flex flex-col items-center justify-between text-center group ${
                         isSelected
-                          ? 'ring-2 ring-accent bg-accent/10'
-                          : 'hover:border-white/25'
+                          ? 'ring-2 ring-accent bg-accent/10 scale-[1.02]'
+                          : 'hover:scale-[1.03] hover:bg-surface-light/80'
                       }`}
                     >
                       <ItemImage
@@ -260,7 +266,7 @@ export default function UpgradePage() {
                         alt={item.name}
                         width={70}
                         height={45}
-                        className="max-h-12 object-contain my-1"
+                        className="max-h-12 object-contain my-1 transition-transform group-hover:scale-110"
                       />
                       <p className="text-[10px] font-bold text-white truncate w-full">
                         {item.name}
@@ -330,9 +336,35 @@ export default function UpgradePage() {
                 phase.kind !== 'idle' ||
                 !isLoaded
               }
-              className="w-full py-3.5 rounded-xl bg-accent hover:bg-accent-hover disabled:bg-white/5 disabled:text-text-muted text-surface-dark font-black text-sm uppercase tracking-wide transition-all disabled:cursor-not-allowed"
+              className="relative w-full py-4 rounded-xl font-black text-sm uppercase tracking-wide transition-all duration-300 disabled:cursor-not-allowed overflow-hidden group"
+              style={{
+                background:
+                  !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    ? 'rgba(255, 255, 255, 0.05)'
+                    : 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%)',
+                boxShadow:
+                  !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    ? 'none'
+                    : '0 0 30px rgba(34, 211, 238, 0.5), 0 0 60px rgba(34, 211, 238, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                color:
+                  !inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded
+                    ? 'rgba(255, 255, 255, 0.3)'
+                    : '#0c0f14',
+              }}
             >
-              {phase.kind === 'spinning' ? 'Upgrading…' : 'Upgrade'}
+              <span className="relative z-10">
+                {phase.kind === 'spinning' ? 'Upgrading…' : 'Upgrade'}
+              </span>
+              {/* Shimmer effect on hover */}
+              {!(!inputItem || !targetItem || chance === null || phase.kind !== 'idle' || !isLoaded) && (
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)',
+                    animation: 'shimmer 2s infinite',
+                  }}
+                />
+              )}
             </button>
             <p className="text-[11px] text-text-muted text-center -mt-3">
               Win chance range {MIN_CHANCE_PERCENT}–{MAX_CHANCE_PERCENT}% ·
@@ -409,11 +441,17 @@ export default function UpgradePage() {
                       type="button"
                       onClick={() => selectTarget(item)}
                       aria-pressed={isSelected}
-                      style={{ borderColor: isSelected ? '#22d3ee' : `${color}25` }}
-                      className={`p-2.5 rounded-xl border bg-surface-dark/80 cursor-pointer flex flex-col items-center justify-between text-center transition-all ${
+                      style={{
+                        borderColor: isSelected ? '#22d3ee' : `${color}40`,
+                        boxShadow: isSelected
+                          ? `0 0 20px ${color}60, inset 0 0 20px ${color}20`
+                          : `0 0 0px transparent`,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                      }}
+                      className={`p-2.5 rounded-xl border bg-surface-dark/80 cursor-pointer flex flex-col items-center justify-between text-center group ${
                         isSelected
-                          ? 'ring-2 ring-accent bg-accent/10'
-                          : 'hover:border-white/25'
+                          ? 'ring-2 ring-accent bg-accent/10 scale-[1.02]'
+                          : 'hover:scale-[1.03] hover:bg-surface-light/80'
                       }`}
                     >
                       <ItemImage
@@ -421,7 +459,7 @@ export default function UpgradePage() {
                         alt={item.name}
                         width={70}
                         height={45}
-                        className="max-h-12 object-contain my-1"
+                        className="max-h-12 object-contain my-1 transition-transform group-hover:scale-110"
                       />
                       <p className="text-[10px] font-bold text-white truncate w-full">
                         {item.name}

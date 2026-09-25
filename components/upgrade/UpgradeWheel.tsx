@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import { motion, useAnimation, useReducedMotion } from 'framer-motion';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, useAnimation, useReducedMotion, useSpring } from 'framer-motion';
 import { playRouletteTick } from '@/lib/sound';
 
 interface UpgradeWheelProps {
@@ -13,7 +13,6 @@ interface UpgradeWheelProps {
 
 const SPIN_TURNS = 4;
 const SPIN_DURATION = 4.2;
-// Degrees kept away from the sector borders so the landing is unambiguous.
 const EDGE_MARGIN = 1.2;
 
 export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
@@ -28,7 +27,17 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
   const completionRef = useRef(onComplete);
   completionRef.current = onComplete;
 
+  // Animated counter for chance display
+  const [displayChance, setDisplayChance] = useState(0);
+  const springChance = useSpring(displayChance, { stiffness: 100, damping: 20 });
+
+  useEffect(() => {
+    setDisplayChance(chancePercent);
+  }, [chancePercent]);
+
   const greenAngle = (chancePercent / 100) * 360;
+  const circumference = 2 * Math.PI * 42;
+  const progressOffset = circumference - (chancePercent / 100) * circumference;
 
   useEffect(() => {
     if (!spinning || outcome === null) return;
@@ -115,48 +124,128 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
   };
 
   return (
-    <div className="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto select-none">
-      {/* Fixed needle */}
+    <div className="relative w-72 h-72 sm:w-80 sm:h-80 mx-auto select-none">
+      {/* Fixed needle with enhanced glow */}
       <div
         aria-hidden="true"
-        className="absolute -top-2 left-1/2 -translate-x-1/2 z-20 w-0 h-0 border-l-[11px] border-r-[11px] border-t-[20px] border-l-transparent border-r-transparent border-t-accent drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]"
+        className="absolute -top-3 left-1/2 -translate-x-1/2 z-20"
+        style={{
+          filter: 'drop-shadow(0 0 12px rgba(34, 211, 238, 0.9))',
+        }}
+      >
+        <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[28px] border-l-transparent border-r-transparent border-t-accent" />
+      </div>
+
+      {/* Outer glow ring with pulse */}
+      <div
+        className="absolute inset-0 rounded-full pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle, transparent 60%, rgba(34, 211, 238, 0.15) 70%, transparent 80%)',
+          animation: 'pulse 3s ease-in-out infinite',
+        }}
       />
+      {/* Main wheel with 3D depth */}
       <motion.div
         animate={controls}
-        className="w-full h-full rounded-full overflow-hidden border-4 border-white/10 shadow-card"
+        className="relative w-full h-full rounded-full overflow-hidden"
+        style={{
+          boxShadow: `
+            0 0 0 4px rgba(34, 211, 238, 0.3),
+            0 0 30px rgba(34, 211, 238, 0.4),
+            inset 0 0 60px rgba(0, 0, 0, 0.8),
+            0 10px 40px rgba(0, 0, 0, 0.6)
+          `,
+        }}
       >
         <svg viewBox="0 0 100 100" className="w-full h-full" role="img" aria-label={`Upgrade wheel with ${chancePercent.toFixed(1)} percent win chance`}>
-          {/* Base red disc; a full-circle sector path cannot render as one arc. */}
-          <circle cx="50" cy="50" r="47" fill="#7f1d1d" opacity={0.55} />
+          <defs>
+            <radialGradient id="winGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#22c55e" stopOpacity="1" />
+              <stop offset="70%" stopColor="#16a34a" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#15803d" stopOpacity="0.9" />
+            </radialGradient>
+            <radialGradient id="loseGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#991b1b" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#7f1d1d" stopOpacity="0.95" />
+            </radialGradient>
+          </defs>
+
+          {/* Base lose sector */}
+          <circle cx="50" cy="50" r="47" fill="url(#loseGradient)" />
+
+          {/* Win sector with gradient */}
           {greenAngle > 0 && (
-            <path d={describeSector(0, greenAngle)} fill="#16a34a" />
+            <path
+              d={describeSector(0, greenAngle)}
+              fill="url(#winGradient)"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))' }}
+            />
           )}
-          {Array.from({ length: 12 }, (_, i) => {
-            const angle = ((i * 30 - 90) * Math.PI) / 180;
+
+          {/* Enhanced tick marks */}
+          {Array.from({ length: 24 }, (_, i) => {
+            const angle = ((i * 15 - 90) * Math.PI) / 180;
+            const isMajor = i % 6 === 0;
             return (
               <line
                 key={i}
-                x1={50 + 40 * Math.cos(angle)}
-                y1={50 + 40 * Math.sin(angle)}
+                x1={50 + (isMajor ? 38 : 42) * Math.cos(angle)}
+                y1={50 + (isMajor ? 38 : 42) * Math.sin(angle)}
                 x2={50 + 47 * Math.cos(angle)}
                 y2={50 + 47 * Math.sin(angle)}
-                stroke="rgba(255,255,255,0.25)"
-                strokeWidth={0.8}
+                stroke={isMajor ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.2)'}
+                strokeWidth={isMajor ? 1.2 : 0.6}
               />
             );
           })}
+
+          {/* Inner ring border */}
+          <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(34, 211, 238, 0.3)" strokeWidth="1" />
         </svg>
       </motion.div>
-      {/* Center chance display */}
+
+      {/* Center display with animated counter and progress ring */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-28 h-28 rounded-full bg-surface-dark/95 border border-white/15 flex flex-col items-center justify-center shadow-inner">
-          <span className="text-2xl font-black font-display text-white leading-none">
-            {chancePercent.toFixed(1)}
-            <span className="text-sm text-text-secondary">%</span>
-          </span>
-          <span className="text-[9px] uppercase tracking-[0.2em] text-text-muted font-bold mt-1">
-            Win chance
-          </span>
+        <div className="relative w-32 h-32 sm:w-36 sm:h-36">
+          {/* Circular progress ring */}
+          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="3" />
+            <motion.circle
+              cx="50"
+              cy="50"
+              r="42"
+              fill="none"
+              stroke="url(#progressGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={progressOffset}
+              initial={{ strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: progressOffset }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              style={{ filter: 'drop-shadow(0 0 6px rgba(34, 211, 238, 0.6))' }}
+            />
+            <defs>
+              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#22d3ee" />
+                <stop offset="100%" stopColor="#06b6d4" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          {/* Center content */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-dark/95 rounded-full border border-white/10 backdrop-blur-sm">
+            <motion.span
+              className="text-3xl sm:text-4xl font-black font-display leading-none bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.4))' }}
+            >
+              {springChance.get().toFixed(1)}
+              <span className="text-base text-text-secondary">%</span>
+            </motion.span>
+            <span className="text-[10px] uppercase tracking-[0.25em] text-text-muted font-bold mt-2">
+              Win chance
+            </span>
+          </div>
         </div>
       </div>
     </div>
