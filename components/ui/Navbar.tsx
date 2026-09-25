@@ -13,8 +13,8 @@ import VladcaseLogo from './VladcaseLogo';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Cases' },
-  { href: '/contracts', label: 'Battles' },
   { href: '/upgrade', label: 'Upgrader' },
+  { href: '/contracts', label: 'Contracts' },
   { href: '/inventory', label: 'Inventory' },
   { href: '/history', label: 'History' },
 ];

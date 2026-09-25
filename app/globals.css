@@ -260,10 +260,40 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Reduced motion fallback for marquee */
+/* Marquee / ticker */
+.marquee-track { animation: ticker 60s linear infinite; }
+.marquee-track:hover { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none !important; }
 }
+
+/* Diagonal stripes */
+.stripes-diag {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 10px
+  );
+}
+
+/* Legacy alias used by older cards */
+.glass-card {
+  background: linear-gradient(180deg, #1A1E29 0%, #0F121A 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.text-accent { color: #8B5CF6; }
+.bg-accent { background-color: #8B5CF6; }
+.border-accent { border-color: #8B5CF6; }
+.bg-radial { background: radial-gradient(circle, var(--tw-gradient-from, rgba(139,92,246,0.12)), transparent 70%); }
+
+/* Roulette anticipation pulse */
+@keyframes winPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(139,92,246,0.35); }
+  50% { box-shadow: 0 0 42px rgba(236,72,153,0.65); }
+}
+.win-anticipation { animation: winPulse 1.1s ease-in-out infinite; }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
