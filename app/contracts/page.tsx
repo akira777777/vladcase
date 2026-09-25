@@ -43,12 +43,14 @@ const RARITY_TIERS: Rarity[] = [
 export default function ContractsPage() {
   const { inventory } = useInventory();
   const { isLoaded } = useEconomy();
-  const { tradeUpContract, addBalance } = useApp();
+  const { tradeUpContract, claimDailyBonus, lastDailyBonusDay } = useApp();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSigning, setIsSigning] = useState(false);
   const [rewardItem, setRewardItem] = useState<Item | null>(null);
-  const [dailyClaimed, setDailyClaimed] = useState(false);
+  const [message, setMessage] = useState('');
+  const dailyClaimed =
+    lastDailyBonusDay === new Date().toISOString().slice(0, 10);
 
   // Group inventory items
   const selectedItems = useMemo(() => {
@@ -72,8 +74,8 @@ export default function ContractsPage() {
       if (idx > highestIdx) highestIdx = idx;
     }
     // Target is next tier up, max out at Special Item
-    const targetIdx = Math.min(highestIdx + 1, RARITY_TIERS.length - 1);
-    return RARITY_TIERS[targetIdx];
+    if (highestIdx >= RARITY_TIERS.length - 1) return null;
+    return RARITY_TIERS[highestIdx + 1];
   }, [selectedItems]);
 
   // Potential reward pool
@@ -108,28 +110,36 @@ export default function ContractsPage() {
   const handleSignContract = async () => {
     if (selectedItems.length < 3 || isSigning || potentialRewards.length === 0) return;
     setIsSigning(true);
+    setMessage('');
     playCaseOpenSound();
 
     // Pick a random reward from the target pool weighted slightly by value
     const randomIndex = Math.floor(Math.random() * potentialRewards.length);
     const chosenReward = potentialRewards[randomIndex];
 
-    setTimeout(async () => {
-      const res = await tradeUpContract(selectedIds, chosenReward);
+    const res = await tradeUpContract(selectedIds, chosenReward);
+    if (!res.ok) {
       setIsSigning(false);
-      if (res.ok) {
-        setRewardItem(chosenReward);
-        playWinSound(chosenReward.rarity);
-        setSelectedIds([]);
-      }
-    }, 1600);
+      setMessage(res.message);
+      return;
+    }
+    setSelectedIds([]);
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    const persistedReward = res.item ?? chosenReward;
+    setRewardItem(persistedReward);
+    playWinSound(persistedReward.rarity);
+    setIsSigning(false);
   };
 
-  const handleDailyBonus = () => {
+  const handleDailyBonus = async () => {
     if (dailyClaimed) return;
-    setDailyClaimed(true);
-    playDepositSound();
-    void addBalance(250);
+    const result = await claimDailyBonus();
+    if (result.ok) {
+      playDepositSound();
+      setMessage('Daily bonus added to your balance.');
+    } else {
+      setMessage(result.message);
+    }
   };
 
   return (
@@ -157,7 +167,7 @@ export default function ContractsPage() {
           </div>
           <p className="text-xs text-text-muted">Claim free $250 demo credit booster!</p>
           <button
-            onClick={handleDailyBonus}
+            onClick={() => void handleDailyBonus()}
             disabled={dailyClaimed}
             className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
               dailyClaimed
@@ -217,9 +227,11 @@ export default function ContractsPage() {
                 if (item) {
                   const color = getRarityColor(item.rarity);
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={item.instanceId || index}
                       onClick={() => toggleSelect(item)}
+                      aria-label={`Remove ${item.name} from contract`}
                       style={{ borderColor: `${color}40` }}
                       className="h-28 rounded-2xl bg-surface-dark border p-2 flex flex-col justify-between items-center relative group cursor-pointer hover:border-red-400/50 transition-all overflow-hidden"
                     >
@@ -248,7 +260,7 @@ export default function ContractsPage() {
                       <div className="absolute inset-0 bg-red-950/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-red-300 text-xs font-bold">
                         Remove
                       </div>
-                    </div>
+                    </button>
                   );
                 }
                 return (
@@ -276,7 +288,7 @@ export default function ContractsPage() {
 
               <button
                 onClick={handleSignContract}
-                disabled={!isLoaded || selectedItems.length < 3 || isSigning}
+                disabled={!isLoaded || selectedItems.length < 3 || potentialRewards.length === 0 || isSigning}
                 className={`py-3.5 px-8 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
                   selectedItems.length >= 3 && !isSigning
                     ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-surface-dark shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:scale-[1.02] font-black'
@@ -287,6 +299,11 @@ export default function ContractsPage() {
                 {isSigning ? 'Forging Contract…' : `Sign Trade-Up (${selectedItems.length}/10)`}
               </button>
             </div>
+            {message && (
+              <p role="status" className="mt-3 text-xs font-bold text-brand-300">
+                {message}
+              </p>
+            )}
           </div>
 
           {/* Target Tier Probability Preview */}
@@ -359,9 +376,12 @@ export default function ContractsPage() {
                   const isSelected = selectedIds.includes(item.instanceId!);
                   const color = getRarityColor(item.rarity);
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={item.instanceId}
                       onClick={() => toggleSelect(item)}
+                      aria-pressed={isSelected}
+                      aria-label={`${item.name}, ${formatCurrency(item.demoValue)}`}
                       style={{
                         borderColor: isSelected ? '#f59e0b' : `${color}25`,
                       }}
@@ -393,7 +413,7 @@ export default function ContractsPage() {
                       <p className="text-[9px] font-bold text-emerald-400 mt-0.5">
                         {formatCurrency(item.demoValue)}
                       </p>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

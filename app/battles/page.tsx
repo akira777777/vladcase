@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CASES } from '@/data/mockData';
@@ -9,7 +9,6 @@ import ItemImage from '@/components/ui/ItemImage';
 import PriceTag from '@/components/ui/PriceTag';
 import { useEconomy } from '@/hooks/useEconomy';
 import { formatCurrency, getRarityColor } from '@/lib/utils';
-import { openCase } from '@/lib/caseLogic';
 import { playClickSound, playWinSound, playRouletteTick } from '@/lib/sound';
 import {
   Swords,
@@ -41,7 +40,7 @@ const BOT_NAMES = [
 ];
 
 export default function BattlesPage() {
-  const { balance, isLoaded } = useEconomy();
+  const { balance, isLoaded, startBattle: commitBattle } = useEconomy();
 
   const presets: BattlePreset[] = useMemo(() => {
     const starter = CASES.find((c) => c.id === 'case-starter-militia') || CASES[0];
@@ -98,6 +97,8 @@ export default function BattlesPage() {
   const [botName, setBotName] = useState('s1mple_bot');
   const [activeRoll, setActiveRoll] = useState(false);
   const [winner, setWinner] = useState<'user' | 'bot' | 'draw' | null>(null);
+  const [battleError, setBattleError] = useState('');
+  const startingRef = useRef(false);
 
   // Custom lineups are represented by presets until arbitrary battle entries
   // are supported by the atomic economy transition.
@@ -112,11 +113,25 @@ export default function BattlesPage() {
   const botTotalValue = botDrops.reduce((sum, item) => sum + item.demoValue, 0);
 
   const startBattle = async () => {
-    if (!canAfford || activeCases.length === 0 || battleState === 'battling') return;
+    if (
+      !canAfford ||
+      activeCases.length === 0 ||
+      battleState === 'battling' ||
+      startingRef.current
+    )
+      return;
 
+    startingRef.current = true;
     playClickSound();
-    const pickedBot = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-    setBotName(pickedBot);
+    setBattleError('');
+    const result = await commitBattle(activeCases);
+    startingRef.current = false;
+    if (!result.ok || !result.battle) {
+      setBattleError(result.ok ? 'Battle result was unavailable. Please retry.' : result.message);
+      return;
+    }
+
+    setBotName(BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]);
     setUserDrops([]);
     setBotDrops([]);
     setCurrentRound(0);
@@ -124,11 +139,20 @@ export default function BattlesPage() {
     setBattleState('battling');
     setActiveRoll(true);
 
-    // Simulate round by round
-    runBattleRounds(activeCases);
+    void runBattleRounds(
+      activeCases,
+      result.battle.userDrops,
+      result.battle.botDrops,
+      result.battle.winner
+    );
   };
 
-  const runBattleRounds = async (casesToOpen: Case[]) => {
+  const runBattleRounds = async (
+    casesToOpen: Case[],
+    committedUserDrops: Item[],
+    committedBotDrops: Item[],
+    committedWinner: 'user' | 'bot' | 'draw'
+  ) => {
     const collectedUser: Item[] = [];
     const collectedBot: Item[] = [];
 
@@ -143,8 +167,8 @@ export default function BattlesPage() {
 
       await new Promise((res) => setTimeout(res, 2200));
 
-      const uDrop = openCase(casesToOpen[r]);
-      const bDrop = openCase(casesToOpen[r]);
+      const uDrop = committedUserDrops[r];
+      const bDrop = committedBotDrops[r];
 
       collectedUser.push(uDrop);
       collectedBot.push(bDrop);
@@ -159,12 +183,7 @@ export default function BattlesPage() {
     }
 
     // Finished all rounds
-    const finalUserVal = collectedUser.reduce((s, it) => s + it.demoValue, 0);
-    const finalBotVal = collectedBot.reduce((s, it) => s + it.demoValue, 0);
-
-    let endWinner: 'user' | 'bot' | 'draw' = 'draw';
-    if (finalUserVal > finalBotVal) {
-      endWinner = 'user';
+    if (committedWinner === 'user') {
       playWinSound('Special Item');
       // Fire celebration confetti
       void import('canvas-confetti').then(({ default: confetti }) => {
@@ -175,11 +194,9 @@ export default function BattlesPage() {
           colors: ['#8B5CF6', '#EC4899', '#FFD700', '#10B981'],
         });
       });
-    } else if (finalBotVal > finalUserVal) {
-      endWinner = 'bot';
     }
 
-    setWinner(endWinner);
+    setWinner(committedWinner);
     setBattleState('finished');
   };
 
@@ -190,6 +207,7 @@ export default function BattlesPage() {
     setCurrentRound(0);
     setWinner(null);
     setActiveRoll(false);
+    setBattleError('');
   };
 
   return (
@@ -226,9 +244,9 @@ export default function BattlesPage() {
           </div>
           <div className="w-px h-6 bg-white/10" />
           <div className="text-right">
-            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Fairness</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Persistence</span>
             <p className="text-xs font-bold text-emerald-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> Provable Seed
+              <ShieldCheck className="w-3.5 h-3.5" /> Atomic Result
             </p>
           </div>
         </div>
@@ -302,7 +320,7 @@ export default function BattlesPage() {
                       You outvalued {botName} by {formatCurrency(Math.abs(userTotalValue - botTotalValue))}. All drops from this battle belong to you!
                     </p>
                   </>
-                ) : (
+                ) : winner === 'bot' ? (
                   <>
                     <XCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
                     <h2 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight">
@@ -310,6 +328,16 @@ export default function BattlesPage() {
                     </h2>
                     <p className="text-xs sm:text-sm text-red-300 mt-1 max-w-lg mx-auto">
                       Opponent won by {formatCurrency(Math.abs(botTotalValue - userTotalValue))}. Better luck in the next duel!
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-12 h-12 text-brand-300 mx-auto mb-2" />
+                    <h2 className="text-3xl sm:text-4xl font-display font-black text-white uppercase tracking-tight">
+                      DRAW — YOUR DROPS ARE RETURNED
+                    </h2>
+                    <p className="text-xs sm:text-sm text-brand-200 mt-1 max-w-lg mx-auto">
+                      Both sides finished with the same value. Your own drops stay in your inventory.
                     </p>
                   </>
                 )}
@@ -470,19 +498,21 @@ export default function BattlesPage() {
               <Flame className="w-5 h-5 text-red-500" />
               Featured Battle Arenas
             </h2>
-            <span className="text-xs font-bold text-text-muted">Pick an arena or duel custom cases</span>
+            <span className="text-xs font-bold text-text-muted">Pick a preset arena</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {presets.map((preset) => {
               const selected = selectedPreset.id === preset.id && !isCustomMode;
               return (
-                <div
+                <button
+                  type="button"
                   key={preset.id}
                   onClick={() => {
                     setSelectedPreset(preset);
                   }}
-                  className={`group relative rounded-xl border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 ${
+                  aria-pressed={selected}
+                  className={`group relative w-full text-left rounded-xl border p-5 cursor-pointer transition-transform transition-colors duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-brand ${
                     selected
                       ? 'border-brand bg-gradient-to-b from-brand/15 to-surface-dark shadow-[0_0_30px_rgba(139,92,246,0.3)]'
                       : 'border-white/[0.08] bg-surface-dark hover:border-white/20'
@@ -518,19 +548,17 @@ export default function BattlesPage() {
                     <span className="text-[10px] font-black uppercase tracking-wider text-text-muted">
                       Duel Instant Bot
                     </span>
-                    <button
-                      type="button"
-                      disabled={!canAfford && selected}
-                      className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                    <span
+                      className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
                         selected
                           ? 'btn-primary'
                           : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
                       }`}
                     >
                       {selected ? 'READY TO FIGHT' : 'SELECT'}
-                    </button>
+                    </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -562,6 +590,11 @@ export default function BattlesPage() {
               </button>
             </div>
           </div>
+          {battleError && (
+            <p role="alert" className="text-sm font-bold text-red-300">
+              {battleError}
+            </p>
+          )}
         </section>
       )}
     </div>
