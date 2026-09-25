@@ -48,7 +48,7 @@ export default function MobileBottomNav() {
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }
 
