@@ -11,24 +11,23 @@ export function formatCurrency(amount: number): string {
   return currencyFormatter.format(amount);
 }
 
+export function formatCompactCurrency(amount: number): string {
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 10_000) return `$${(amount / 1_000).toFixed(1)}K`;
+  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(2)}K`;
+  return formatCurrency(amount);
+}
+
 export function getRarityColor(rarity: Rarity): string {
   switch (rarity) {
-    case 'Consumer':
-      return '#B0C3D9';
-    case 'Industrial':
-      return '#5E98D9';
-    case 'Mil-Spec':
-      return '#4B69FF';
-    case 'Restricted':
-      return '#8847FF';
-    case 'Classified':
-      return '#D32CE6';
-    case 'Covert':
-      return '#EB4B4B';
-    case 'Special Item':
-      return '#FFD700';
-    default:
-      return '#FFFFFF';
+    case 'Consumer': return '#B0C3D9';
+    case 'Industrial': return '#5E98D9';
+    case 'Mil-Spec': return '#4B69FF';
+    case 'Restricted': return '#8847FF';
+    case 'Classified': return '#D32CE6';
+    case 'Covert': return '#EB4B4B';
+    case 'Special Item': return '#FFD700';
+    default: return '#FFFFFF';
   }
 }
 
@@ -53,8 +52,36 @@ export function getRarityBadgeClass(rarity: Rarity): string {
   }
 }
 
+export function getRarityShort(rarity: Rarity): string {
+  switch (rarity) {
+    case 'Consumer': return 'CONSUMER';
+    case 'Industrial': return 'INDUSTRIAL';
+    case 'Mil-Spec': return 'MIL-SPEC';
+    case 'Restricted': return 'RESTRICTED';
+    case 'Classified': return 'CLASSIFIED';
+    case 'Covert': return 'COVERT';
+    case 'Special Item': return '★ SPECIAL';
+  }
+}
+
+export function getRarityTier(rarity: Rarity): 'low' | 'mid' | 'high' | 'top' {
+  switch (rarity) {
+    case 'Consumer':
+    case 'Industrial':
+      return 'low';
+    case 'Mil-Spec':
+    case 'Restricted':
+      return 'mid';
+    case 'Classified':
+    case 'Covert':
+      return 'high';
+    case 'Special Item':
+      return 'top';
+  }
+}
+
 export function getRankTitle(level: number): { title: string; color: string } {
-  if (level >= 10) return { title: 'The Global Elite', color: '#FFD700' };
+  if (level >= 10) return { title: 'The Global Elite', color: '#F5B642' };
   if (level >= 8) return { title: 'Supreme Master', color: '#EB4B4B' };
   if (level >= 6) return { title: 'Legendary Eagle', color: '#D32CE6' };
   if (level >= 4) return { title: 'Master Guardian', color: '#8847FF' };
@@ -69,4 +96,27 @@ export function getItemWear(item: Item): string {
   if (item.demoValue > 100) return 'Minimal Wear';
   if (item.demoValue > 20) return 'Field-Tested';
   return 'Battle-Scarred';
+}
+
+export function getWeaponCategory(weaponType: string): 'KNIFE' | 'RIFLE' | 'AWP' | 'PISTOL' | 'SMG' | 'HEAVY' | 'SPECIAL' {
+  const w = weaponType.toLowerCase();
+  if (w.includes('knife') || w.includes('karambit') || w.includes('butterfly')) return 'KNIFE';
+  if (w.includes('awp')) return 'AWP';
+  if (w.includes('ak-') || w.includes('m4') || w.includes('aug') || w.includes('sg') || w.includes('famas') || w.includes('galil')) return 'RIFLE';
+  if (w.includes('usp') || w.includes('glock') || w.includes('p250') || w.includes('deagle') || w.includes('pistol') || w.includes('five-seveN') || w.includes('tec')) return 'PISTOL';
+  if (w.includes('mp') || w.includes('mac') || w.includes('p90') || w.includes('mp7') || w.includes('mp9')) return 'SMG';
+  if (w.includes('nova') || w.includes('xm') || w.includes('mag') || w.includes('sawed') || w.includes('negev')) return 'HEAVY';
+  return 'SPECIAL';
+}
+
+export function timeAgo(ts: number): string {
+  const seconds = Math.floor((Date.now() - ts) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }

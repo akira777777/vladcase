@@ -1,0 +1,9 @@
+npm notice run vladcase@0.1.0 dev
+npm notice run next dev --hostname 127.0.0.1 --port 3100
+   ▲ Next.js 15.5.24
+   - Local:        http://127.0.0.1:3100
+   - Network:      http://127.0.0.1:3100
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1692ms

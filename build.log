@@ -1,0 +1,43 @@
+npm notice run vladcase@0.1.0 build
+npm notice run next build
+   ▲ Next.js 15.5.24
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 2.8s
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/20) ...
+   Generating static pages (5/20) 
+   Generating static pages (10/20) 
+   Generating static pages (15/20) 
+ ✓ Generating static pages (20/20)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    9.78 kB         126 kB
+├ ○ /_not-found                            996 B         104 kB
+├ ● /cases/[caseId]                      3.96 kB         110 kB
+├   ├ /cases/case-budget-starter
+├   ├ /cases/case-ak-legends
+├   ├ /cases/case-sniper-elite
+├   └ [+4 more paths]
+├ ○ /contracts                           5.45 kB         161 kB
+├ ○ /history                             3.58 kB         116 kB
+├ ○ /inventory                           6.81 kB         120 kB
+├ ○ /manifest.webmanifest                  130 B         103 kB
+├ ○ /robots.txt                            130 B         103 kB
+├ ○ /settings                             2.5 kB         115 kB
+├ ○ /sitemap.xml                           130 B         103 kB
+├ ○ /stats                               3.24 kB         116 kB
+└ ○ /upgrade                             10.2 kB         161 kB
++ First Load JS shared by all             103 kB
+  ├ chunks/255-c5a697ddbf82d774.js       46.4 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          2.01 kB
+
+
+○  (Static)  prerendered as static content
+●  (SSG)     prerendered as static HTML (uses generateStaticParams)
+

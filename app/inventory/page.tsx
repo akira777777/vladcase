@@ -1,76 +1,40 @@
 'use client';
 
-import ItemImage from '@/components/ui/ItemImage';
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useInventory } from '@/hooks/useInventory';
 import { usePreferences } from '@/hooks/usePreferences';
 import { Item, Rarity } from '@/types';
-import { formatCurrency, getRarityColor, getItemWear } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { playCashSound } from '@/lib/sound';
-import {
-  Package,
-  Trash2,
-  DollarSign,
-  Search,
-  ArrowUpDown,
-  Filter,
-  Sparkles,
-  Trophy,
-  X,
-  ChevronDown,
-  Heart,
-} from 'lucide-react';
+import SkinCard from '@/components/ui/SkinCard';
+import { Package, Search, ChevronDown, Heart, ArrowUpDown, Trophy, Layers } from 'lucide-react';
+import { RARITIES } from '@/lib/stats';
 
-// CS2 Rarity numeric weight for sorting
-const rarityRank: Record<Rarity, number> = {
-  'Special Item': 7,
-  Covert: 6,
-  Classified: 5,
-  Restricted: 4,
-  'Mil-Spec': 3,
-  Industrial: 2,
-  Consumer: 1,
+const SORT_LABELS: Record<string, string> = {
+  newest: 'Newest', value_desc: 'Value High → Low', value_asc: 'Value Low → High', rarity_desc: 'Rarity', name: 'Name (A-Z)',
 };
+const RANK: Record<Rarity, number> = { 'Special Item': 7, Covert: 6, Classified: 5, Restricted: 4, 'Mil-Spec': 3, Industrial: 2, Consumer: 1 };
 
 export default function InventoryPage() {
-  const { inventory, favoriteIds, toggleFavorite, removeItem, sellItem, sellAll, isLoaded } = useInventory();
+  const { inventory, favoriteIds, toggleFavorite, sellItem } = useInventory();
   const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
-
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<
-    'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'
-  >('newest');
+  const [sortBy, setSortBy] = useState<'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'>('newest');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Total inventory net worth calculation
-  const totalValuation = useMemo(() => {
-    return inventory.reduce((acc, item) => acc + (item.demoValue || 0), 0);
-  }, [inventory]);
+  const totalValuation = useMemo(() => inventory.reduce((acc, item) => acc + (item.demoValue || 0), 0), [inventory]);
 
-  // Top valued item in collection
-  const topItem = useMemo(() => {
-    if (inventory.length === 0) return null;
-    return [...inventory].sort((a, b) => (b.demoValue || 0) - (a.demoValue || 0))[0];
-  }, [inventory]);
+  useEffect(() => { setVisibleCount(48); }, [filterRarity, searchQuery, sortBy, favoritesOnly]);
 
-  useEffect(() => {
-    setVisibleCount(48);
-  }, [filterRarity, searchQuery, sortBy, favoritesOnly]);
-
-  // Filter items
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return inventory.filter((item) => {
-      // Rarity filter
       if (favoritesOnly && !favoriteIds.includes(item.id)) return false;
-      if (filterRarity !== 'ALL' && item.rarity !== filterRarity) {
-        return false;
-      }
-      // Search query
+      if (filterRarity !== 'ALL' && item.rarity !== filterRarity) return false;
       if (query !== '') {
         const matchesName = item.name.toLowerCase().includes(query);
         const matchesWeapon = item.weaponType.toLowerCase().includes(query);
@@ -80,350 +44,122 @@ export default function InventoryPage() {
     });
   }, [inventory, filterRarity, searchQuery, favoritesOnly, favoriteIds]);
 
-  // Sort items
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
       switch (sortBy) {
-        case 'value_desc':
-          return (b.demoValue || 0) - (a.demoValue || 0);
-        case 'value_asc':
-          return (a.demoValue || 0) - (b.demoValue || 0);
-        case 'rarity_desc':
-          return (rarityRank[b.rarity] || 0) - (rarityRank[a.rarity] || 0);
-        case 'name':
-          return a.name.localeCompare(b.name);
+        case 'value_desc': return (b.demoValue || 0) - (a.demoValue || 0);
+        case 'value_asc': return (a.demoValue || 0) - (b.demoValue || 0);
+        case 'rarity_desc': return RANK[b.rarity] - RANK[a.rarity];
+        case 'name': return a.name.localeCompare(b.name);
         case 'newest':
-        default:
-          return (b.unboxedAt || 0) - (a.unboxedAt || 0);
+        default: return (b.unboxedAt || 0) - (a.unboxedAt || 0);
       }
     });
   }, [filteredItems, sortBy]);
 
+  const toggleSelect = (item: Item) => {
+    const id = item.instanceId || '';
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleSellOne = (item: Item) => {
     if (preferences.confirmSales && !window.confirm(`Sell ${item.name} for ${formatCurrency(item.demoValue)}?`)) return;
     playCashSound();
-    const id = item.instanceId || item.id;
-    void sellItem(id);
-  };
-
-  const handleSellAll = () => {
-    if (inventory.length === 0) return;
-    if (preferences.confirmSales && !window.confirm(`Sell all ${inventory.length} items in your inventory for ${formatCurrency(totalValuation)}?`)) return;
-    playCashSound();
-    void sellAll();
+    void sellItem(item.instanceId!);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-      {/* Header & Inventory Valuation Banner */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-white/10">
+    <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-accent uppercase tracking-wider mb-2">
-            <Package className="w-3.5 h-3.5 text-accent" />
-            <span>Vault Collection</span>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-display font-black text-white tracking-tight">
-            Inventory
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Manage, inspect, and liquidate your collection of weapon finishes.
-          </p>
+          <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-brand-300">Local Collection</p>
+          <h1 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">Inventory</h1>
+          <p className="mt-2 text-xs text-text-secondary max-w-2xl">Every weapon you unbox is stored locally in this browser. Sell, favorite, or build your collection.</p>
         </div>
+        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-text-secondary hover:text-white">← Back to cases</Link>
+      </div>
 
-        {/* Valuation & Sell All Banner */}
-        <div className="flex flex-wrap items-center gap-4 bg-surface/90 backdrop-blur-xl p-4 sm:p-5 rounded-2xl border border-white/10 shadow-xl">
-          <div className="pr-4 border-r border-white/10">
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-              Total Net Worth
-            </p>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-400 font-display">
-              {isLoaded ? formatCurrency(totalValuation) : '$0.00'}
-            </p>
-            <p className="text-[10px] text-text-secondary mt-0.5">
-              {inventory.length} Total {inventory.length === 1 ? 'Skin' : 'Skins'}
-            </p>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatTile label="ITEMS" value={inventory.length.toLocaleString()} icon={Package} color="text-brand-300" glow="rgba(139, 92, 246, 0.45)" />
+        <StatTile label="NET WORTH" value={formatCurrency(totalValuation)} icon={Trophy} color="text-gold-light" glow="rgba(245, 182, 66, 0.45)" />
+        <StatTile label="FAVORITES" value={favoriteIds.length.toLocaleString()} icon={Heart} color="text-magenta-400" glow="rgba(236, 72, 153, 0.45)" />
+        <StatTile label="SELECTED" value={selectedIds.size.toLocaleString()} icon={Layers} color="text-emerald-400" glow="rgba(16, 185, 129, 0.45)" />
+      </div>
+
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 panel-raised p-3">
+        <div className="flex flex-1 items-center gap-2">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search items or weapons" className="w-full pl-8 pr-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white placeholder:text-text-muted focus:outline-none focus:border-brand/50" />
           </div>
-
-          {topItem && (
-            <div className="hidden lg:block pr-4 border-r border-white/10 max-w-[200px]">
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1">
-                <Trophy className="w-3 h-3 text-amber-400" /> Top Asset
-              </p>
-              <p className="text-xs font-bold text-white truncate mt-1" title={topItem.name}>
-                {topItem.name}
-              </p>
-              <p className="text-xs font-bold text-emerald-400 font-display">
-                {formatCurrency(topItem.demoValue)}
-              </p>
-            </div>
-          )}
-
-          <button
-            onClick={handleSellAll}
-            disabled={!isLoaded || inventory.length === 0}
-            className={`px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${
-              inventory.length > 0
-                ? 'bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                : 'bg-white/5 text-text-muted cursor-not-allowed border border-white/5'
-            }`}
-          >
-            <DollarSign className="w-4 h-4" />
-            <span>Sell All</span>
+          <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} aria-label="Filter by rarity" className="pl-3 pr-7 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
+            <option value="ALL">All rarities</option>
+            {RARITIES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <button type="button" onClick={() => setFavoritesOnly((f) => !f)} aria-pressed={favoritesOnly} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${favoritesOnly ? 'bg-pink-500/15 text-pink-300 border-pink-500/40' : 'bg-surface-dark border-white/[0.06] text-text-secondary hover:text-pink-300'}`}>
+            <Heart className="w-3.5 h-3.5" fill={favoritesOnly ? 'currentColor' : 'none'} />Favorites
           </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort items" className="px-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
+            {Object.entries(SORT_LABELS).map(([k, label]) => <option key={k} value={k}>Sort: {label}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* Filter and Search Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Search */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            aria-label="Search inventory"
-            placeholder="Search by weapon or skin..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-surface/90 border border-white/10 text-white placeholder-text-muted text-sm focus:border-accent focus:outline-none transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Rarity Filter */}
-        <div className="relative">
-          <Filter className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <select
-            aria-label="Filter rarity"
-            value={filterRarity}
-            onChange={(e) => setFilterRarity(e.target.value)}
-            className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-surface/90 border border-white/10 text-white text-sm focus:border-accent focus:outline-none appearance-none cursor-pointer"
-          >
-            <option value="ALL">All Rarities</option>
-            <option value="Special Item">Special Items (Gold)</option>
-            <option value="Covert">Covert (Red)</option>
-            <option value="Classified">Classified (Pink)</option>
-            <option value="Restricted">Restricted (Purple)</option>
-            <option value="Mil-Spec">Mil-Spec (Blue)</option>
-            <option value="Industrial">Industrial (Light Blue)</option>
-            <option value="Consumer">Consumer (White)</option>
-          </select>
-          <ChevronDown className="w-4 h-4 text-text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-
-        {/* Sort By */}
-        <div className="relative">
-          <ArrowUpDown className="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <select
-            aria-label="Sort inventory"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="w-full pl-10 pr-8 py-2.5 rounded-xl bg-surface/90 border border-white/10 text-white text-sm focus:border-accent focus:outline-none appearance-none cursor-pointer"
-          >
-            <option value="newest">Recently Unboxed</option>
-            <option value="value_desc">Price: High to Low</option>
-            <option value="value_asc">Price: Low to High</option>
-            <option value="rarity_desc">Highest Rarity</option>
-            <option value="name">Alphabetical (A-Z)</option>
-          </select>
-          <ChevronDown className="w-4 h-4 text-text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-
-          <button onClick={() => setFavoritesOnly((current) => !current)} aria-pressed={favoritesOnly} className={`rounded-xl border px-4 py-2.5 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${favoritesOnly ? 'border-pink-400/40 bg-pink-500/10 text-pink-300' : 'bg-white/5 border-white/10 text-text-secondary hover:text-white'}`}>
-            <Heart className="w-4 h-4" fill={favoritesOnly ? 'currentColor' : 'none'} />
-            Favorites {favoriteIds.length > 0 && <span>({favoriteIds.length})</span>}
-          </button>
-          {(filterRarity !== 'ALL' || searchQuery !== '' || favoritesOnly) && (
-            <button
-              onClick={() => {
-                setFilterRarity('ALL');
-                setSearchQuery('');
-                setFavoritesOnly(false);
-              }}
-              className="rounded-xl bg-white/5 hover:bg-white/10 text-text-secondary hover:text-white text-sm font-medium border border-white/10 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <X className="w-4 h-4" />
-              <span>Clear Filters</span>
-            </button>
-          )}
-        </div>
-
-      {/* Inventory Grid */}
       {sortedItems.length === 0 ? (
-        <div className="text-center py-24 bg-surface-dark/40 rounded-3xl border border-dashed border-white/15">
-          <Package className="w-14 h-14 text-text-muted mx-auto mb-4 opacity-40" />
-          <h3 className="text-xl font-bold text-white mb-1">
-            {inventory.length === 0
-              ? 'No items in your inventory'
-              : 'No items match your filters'}
-          </h3>
-          <p className="text-xs text-text-secondary max-w-sm mx-auto mb-6">
-            {inventory.length === 0
-              ? 'Start opening cases to unbox rare weapons, knives, and gloves.'
-              : 'Try clearing your search query or changing the rarity filter.'}
-          </p>
-          {inventory.length === 0 ? (
-            <Link
-              href="/#cases"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-surface-dark font-bold text-sm hover:bg-accent-hover transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:scale-105 active:scale-95"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Explore Cases</span>
-            </Link>
-          ) : (
-            <button
-              onClick={() => {
-                setFilterRarity('ALL');
-                setSearchQuery('');
-              }}
-              className="px-5 py-2.5 rounded-xl bg-white/10 text-white font-medium text-xs hover:bg-white/20 transition-colors"
-            >
-              Reset Filters
-            </button>
-          )}
+        <div className="text-center py-20 panel">
+          <Package className="w-12 h-12 text-text-muted mx-auto mb-3 opacity-50" />
+          <p className="text-text-secondary font-bold">No items match this view</p>
+          <p className="text-xs text-text-muted mt-1">Open a case to start collecting weapons.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {sortedItems.slice(0, visibleCount).map((item, idx) => {
-            const rarityColor = getRarityColor(item.rarity);
-            const instanceKey = item.instanceId || `${item.id}-${idx}`;
-            const wear = getItemWear(item);
-
-            return (
-              <div
-                key={instanceKey}
-                className="bg-surface/90 rounded-2xl border flex flex-col justify-between p-3.5 hover:border-white/30 transition-all hover:shadow-[0_10px_30px_rgba(0,0,0,0.6)] group relative overflow-hidden"
-                style={{
-                  borderColor: `${rarityColor}35`,
-                  boxShadow: `0 4px 15px ${rarityColor}08`,
-                }}
-              >
-                {/* Top Rarity Accent Strip */}
-                <div
-                  className="absolute top-0 inset-x-0 h-1"
-                  style={{
-                    backgroundColor: rarityColor,
-                    boxShadow: `0 0 8px ${rarityColor}`,
-                  }}
-                />
-
-                {/* Card Top: Weapon Type & Wear */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                      {item.weaponType}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => void toggleFavorite(item.id)}
-                        className={`p-0.5 rounded transition-colors ${
-                          favoriteIds.includes(item.id)
-                            ? 'text-pink-400'
-                            : 'text-text-muted hover:text-white'
-                        }`}
-                        title={
-                          favoriteIds.includes(item.id)
-                            ? 'Remove from favorites'
-                            : 'Add to favorites'
-                        }
-                      >
-                        <Heart
-                          className="w-3.5 h-3.5"
-                          fill={favoriteIds.includes(item.id) ? 'currentColor' : 'none'}
-                        />
-                      </button>
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-wider"
-                        style={{ color: rarityColor }}
-                      >
-                        {item.rarity}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Weapon Image */}
-                  <div className="relative w-full h-28 flex items-center justify-center my-2 bg-surface-dark/70 rounded-xl overflow-hidden p-1 border border-white/5">
-                    <ItemImage
-                      src={item.image}
-                      alt={item.name}
-                      className="max-h-24 max-w-full object-contain group-hover:scale-110 transition-transform duration-300 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.85)]"
-                    />
-                  </div>
-
-                  {/* Skin Name & Valuation */}
-                  <div className="mb-3">
-                    <h4
-                      className="text-xs font-bold text-white truncate"
-                      title={item.name}
-                    >
-                      {item.name}
-                    </h4>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] text-text-muted">
-                        {wear}
-                      </span>
-                      <p className="text-sm font-black text-emerald-400 font-display">
-                        {formatCurrency(item.demoValue)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions: Sell & Delete */}
-                <div className="grid grid-cols-5 gap-1.5 pt-2 border-t border-white/5">
-                  <button
-                    onClick={() => void toggleFavorite(item.id)}
-                    aria-label={`${favoriteIds.includes(item.id) ? 'Remove' : 'Add'} ${item.name} ${favoriteIds.includes(item.id) ? 'from' : 'to'} favorites`}
-                    aria-pressed={favoriteIds.includes(item.id)}
-                    className={`py-2 rounded-lg border flex items-center justify-center transition-colors ${favoriteIds.includes(item.id) ? 'border-pink-400/40 bg-pink-500/15 text-pink-300' : 'border-white/5 bg-white/5 text-text-muted hover:text-pink-300'}`}
-                  >
-                    <Heart className="w-3.5 h-3.5" fill={favoriteIds.includes(item.id) ? 'currentColor' : 'none'} />
-                  </button>
-                  <button
-                    disabled={!isLoaded}
-                    onClick={() => handleSellOne(item)}
-                    title={`Sell for ${formatCurrency(item.demoValue)}`}
-                    className="col-span-3 py-2 px-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 shadow-sm"
-                  >
-                    <DollarSign className="w-3.5 h-3.5" />
-                    <span>Sell</span>
-                  </button>
-
-                  <button
-                    disabled={!isLoaded}
-                    onClick={() => {
-                      if (preferences.confirmDeletes && !window.confirm(`Remove ${item.name} without selling it?`)) return;
-                      void removeItem(item.instanceId!);
-                    }}
-                    title="Remove from inventory"
-                    className="col-span-1 py-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-text-muted hover:text-red-400 border border-white/5 flex items-center justify-center transition-colors active:scale-95"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {sortedItems.slice(0, visibleCount).map((item) => (
+            <SkinCard
+              key={item.instanceId || item.id}
+              item={item}
+              selectable
+              selected={selectedIds.has(item.instanceId || '')}
+              onClick={toggleSelect}
+              onSell={handleSellOne}
+              onFavorite={(it) => void toggleFavorite(it.id)}
+              favorite={favoriteIds.includes(item.id)}
+              showFavorite
+              showSell
+              showWear
+            />
+          ))}
         </div>
       )}
 
       {visibleCount < sortedItems.length && (
-        <div className="flex justify-center pt-4">
-          <button
-            className="rounded-2xl border border-white/20 bg-surface/80 hover:bg-white/10 px-8 py-3.5 font-bold text-xs text-white transition-all hover:scale-105 active:scale-95 shadow-lg flex items-center gap-2"
-            onClick={() => setVisibleCount((count) => count + 48)}
-          >
-            <ChevronDown className="w-4 h-4 text-accent" />
+        <div className="flex justify-center pt-2">
+          <button type="button" onClick={() => setVisibleCount((count) => count + 48)} className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-surface-dark border border-white/[0.06] hover:border-white/20 hover:bg-surface-raised text-white transition-all">
+            <ChevronDown className="w-4 h-4 text-brand-300" />
             <span>Load more ({sortedItems.length - visibleCount} remaining)</span>
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function StatTile({ label, value, icon: Icon, color, glow }: { label: string; value: string; icon: React.ComponentType<{ className?: string }>; color: string; glow: string }) {
+  return (
+    <div className="relative rounded-lg border border-white/[0.06] bg-gradient-to-b from-surface-raised to-surface-dark p-4 overflow-hidden">
+      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-15 blur-2xl" style={{ backgroundColor: glow }} />
+      <div className="flex items-start justify-between">
+        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">{label}</span>
+        <Icon className={`w-4 h-4 ${color}`} />
+      </div>
+      <p className={`mt-3 text-xl font-display font-black ${color} price-display`}>{value}</p>
     </div>
   );
 }
