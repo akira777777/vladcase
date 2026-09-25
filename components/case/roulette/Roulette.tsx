@@ -180,26 +180,26 @@ export const Roulette: React.FC<RouletteProps> = ({
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-56 bg-surface-dark/95 border-y-2 border-white/10 overflow-hidden shadow-2xl rounded-2xl select-none"
+      className="relative w-full h-56 bg-[#0A0C12] border-y-2 border-white/10 overflow-hidden shadow-2xl rounded-2xl select-none"
     >
       {/* Top Center Needle */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-        <div className="w-1.5 h-8 bg-gradient-to-b from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
-        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-accent shadow-[0_0_15px_#22d3ee]" />
+        <div className="w-1.5 h-8 bg-gradient-to-b from-brand to-brand/90 shadow-glow-brand" />
+        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[12px] border-t-brand shadow-glow-brand" />
       </div>
 
       {/* Bottom Center Needle */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[12px] border-b-accent shadow-[0_0_15px_#22d3ee]" />
-        <div className="w-1.5 h-8 bg-gradient-to-t from-accent to-accent/90 shadow-[0_0_15px_#22d3ee]" />
+        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[12px] border-b-brand shadow-glow-brand" />
+        <div className="w-1.5 h-8 bg-gradient-to-t from-brand to-brand/90 shadow-glow-brand" />
       </div>
 
       {/* Center Vertical Guide Line */}
-      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent/40 z-10 pointer-events-none shadow-[0_0_10px_#22d3ee]" />
+      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-[2px] bg-brand/40 z-10 pointer-events-none shadow-glow-brand" />
 
       {/* Edge Shadow Vignette */}
-      <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-surface-dark via-surface-dark/90 to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-surface-dark via-surface-dark/90 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-[#0A0C12] via-[#0A0C12]/90 to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-[#0A0C12] via-[#0A0C12]/90 to-transparent z-10 pointer-events-none" />
 
       {/* Reel strip */}
       <motion.div

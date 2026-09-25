@@ -17,24 +17,38 @@ const SORT_LABELS: Record<string, string> = {
 const RANK: Record<Rarity, number> = { 'Special Item': 7, Covert: 6, Classified: 5, Restricted: 4, 'Mil-Spec': 3, Industrial: 2, Consumer: 1 };
 
 export default function InventoryPage() {
-  const { inventory, favoriteIds, toggleFavorite, sellItem } = useInventory();
+  const { inventory, favoriteIds, toggleFavorite, sellItem, sellMany } = useInventory();
   const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
+  const [filterWeapon, setFilterWeapon] = useState<string>('ALL');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<'value_desc' | 'value_asc' | 'rarity_desc' | 'name' | 'newest'>('newest');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const totalValuation = useMemo(() => inventory.reduce((acc, item) => acc + (item.demoValue || 0), 0), [inventory]);
+  const selectedItems = useMemo(
+    () => inventory.filter((i) => i.instanceId && selectedIds.has(i.instanceId)),
+    [inventory, selectedIds]
+  );
+  const selectedValue = useMemo(() => selectedItems.reduce((s, i) => s + (i.demoValue || 0), 0), [selectedItems]);
 
-  useEffect(() => { setVisibleCount(48); }, [filterRarity, searchQuery, sortBy, favoritesOnly]);
+  useEffect(() => { setVisibleCount(48); }, [filterRarity, filterWeapon, searchQuery, sortBy, favoritesOnly]);
 
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return inventory.filter((item) => {
       if (favoritesOnly && !favoriteIds.includes(item.id)) return false;
       if (filterRarity !== 'ALL' && item.rarity !== filterRarity) return false;
+      if (filterWeapon !== 'ALL') {
+        const w = item.weaponType.toLowerCase();
+        if (filterWeapon === 'KNIFE' && !(w.includes('knife') || w.includes('karambit') || w.includes('butterfly'))) return false;
+        if (filterWeapon === 'RIFLE' && !(w.includes('ak-') || w.includes('m4') || w.includes('aug') || w.includes('sg') || w.includes('famas') || w.includes('galil'))) return false;
+        if (filterWeapon === 'AWP' && !w.includes('awp')) return false;
+        if (filterWeapon === 'PISTOL' && !(w.includes('usp') || w.includes('glock') || w.includes('p250') || w.includes('deagle') || w.includes('desert') || w.includes('pistol') || w.includes('tec'))) return false;
+      }
       if (query !== '') {
         const matchesName = item.name.toLowerCase().includes(query);
         const matchesWeapon = item.weaponType.toLowerCase().includes(query);
@@ -42,7 +56,7 @@ export default function InventoryPage() {
       }
       return true;
     });
-  }, [inventory, filterRarity, searchQuery, favoritesOnly, favoriteIds]);
+  }, [inventory, filterRarity, filterWeapon, searchQuery, favoritesOnly, favoriteIds]);
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
@@ -73,6 +87,16 @@ export default function InventoryPage() {
     void sellItem(item.instanceId!);
   };
 
+  const handleSellSelected = async () => {
+    if (selectedIds.size === 0 || bulkBusy) return;
+    if (preferences.confirmSales && !window.confirm(`Sell ${selectedIds.size} items for ${formatCurrency(selectedValue)}?`)) return;
+    setBulkBusy(true);
+    playCashSound();
+    const result = await sellMany([...selectedIds]);
+    setBulkBusy(false);
+    if (result.ok) setSelectedIds(new Set());
+  };
+
   return (
     <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -92,14 +116,21 @@ export default function InventoryPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 panel-raised p-3">
-        <div className="flex flex-1 items-center gap-2">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[180px] max-w-md">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search items or weapons" className="w-full pl-8 pr-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white placeholder:text-text-muted focus:outline-none focus:border-brand/50" />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search items or weapons" aria-label="Search inventory" className="w-full pl-8 pr-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white placeholder:text-text-muted focus:outline-none focus:border-brand/50" />
           </div>
           <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} aria-label="Filter by rarity" className="pl-3 pr-7 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
             <option value="ALL">All rarities</option>
             {RARITIES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select value={filterWeapon} onChange={(e) => setFilterWeapon(e.target.value)} aria-label="Filter by weapon type" className="pl-3 pr-7 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
+            <option value="ALL">All weapons</option>
+            <option value="KNIFE">Knives</option>
+            <option value="RIFLE">Rifles</option>
+            <option value="AWP">AWP</option>
+            <option value="PISTOL">Pistols</option>
           </select>
           <button type="button" onClick={() => setFavoritesOnly((f) => !f)} aria-pressed={favoritesOnly} className={`inline-flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${favoritesOnly ? 'bg-pink-500/15 text-pink-300 border-pink-500/40' : 'bg-surface-dark border-white/[0.06] text-text-secondary hover:text-pink-300'}`}>
             <Heart className="w-3.5 h-3.5" fill={favoritesOnly ? 'currentColor' : 'none'} />Favorites
@@ -145,6 +176,26 @@ export default function InventoryPage() {
             <ChevronDown className="w-4 h-4 text-brand-300" />
             <span>Load more ({sortedItems.length - visibleCount} remaining)</span>
           </button>
+        </div>
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="sticky bottom-[72px] lg:bottom-4 z-30 panel-raised p-3 flex flex-col sm:flex-row sm:items-center gap-3 shadow-card-elevated border-brand/30">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-lg bg-brand/20 text-brand-300 border border-brand/40 text-sm font-black">{selectedIds.size}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-white uppercase tracking-wider">{selectedIds.size} selected</p>
+              <p className="text-[11px] font-bold text-emerald-400 price-display">{formatCurrency(selectedValue)} total value</p>
+            </div>
+          </div>
+          <div className="flex flex-1 flex-col sm:flex-row gap-2 sm:justify-end">
+            <button type="button" onClick={() => setSelectedIds(new Set())} className="btn-ghost text-xs">Clear</button>
+            <Link href="/contracts" className="btn-ghost text-xs text-center border-brand/40 text-brand-300 hover:text-white">Use in Contract</Link>
+            <Link href="/upgrade" className="btn-ghost text-xs text-center border-gold/40 text-gold-light hover:text-white">Use in Upgrader</Link>
+            <button type="button" disabled={bulkBusy} onClick={() => void handleSellSelected()} className="btn-success text-xs disabled:opacity-50">
+              {bulkBusy ? 'Selling…' : `Sell selected (${formatCurrency(selectedValue)})`}
+            </button>
+          </div>
         </div>
       )}
     </div>

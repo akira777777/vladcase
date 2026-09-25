@@ -279,6 +279,7 @@ export type Command =
   | { type: 'openMany'; caseData: Case; count: number }
   | { type: 'credit'; amount: number }
   | { type: 'sell' | 'remove'; id: string }
+  | { type: 'sellMany'; ids: string[] }
   | { type: 'sellAll' | 'reset' }
   | { type: 'toggleFavorite' | 'toggleGoal'; id: string }
   | { type: 'contract'; inputIds: string[]; rewardItem: Item }
@@ -432,6 +433,40 @@ export function transition(
             state.stats.removedValueCents +
               (command.type === 'remove' ? valueCents : 0)
           ),
+        },
+      };
+      break;
+    }
+    case 'sellMany': {
+      const idSet = new Set(command.ids);
+      const targets = state.inventory.filter(
+        (entry) => entry.instanceId && idSet.has(entry.instanceId)
+      );
+      if (targets.length === 0) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'missing',
+            message: 'None of the selected items were found in inventory.',
+          },
+        };
+      }
+      const valueCents = safeTotal(
+        targets.reduce(
+          (sum, entry) => safeTotal(sum + cents(entry.demoValue)),
+          0
+        )
+      );
+      next = {
+        ...state,
+        balanceCents: safeTotal(state.balanceCents + valueCents),
+        inventory: state.inventory.filter(
+          (entry) => !entry.instanceId || !idSet.has(entry.instanceId)
+        ),
+        stats: {
+          ...state.stats,
+          realizedCents: safeTotal(state.stats.realizedCents + valueCents),
         },
       };
       break;

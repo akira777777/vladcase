@@ -13,6 +13,7 @@ import VladcaseLogo from './VladcaseLogo';
 
 const PRIMARY_NAV = [
   { href: '/', label: 'Cases' },
+  { href: '/battles', label: 'Battles', badge: 'HOT' },
   { href: '/upgrade', label: 'Upgrader' },
   { href: '/contracts', label: 'Contracts' },
   { href: '/inventory', label: 'Inventory' },
@@ -50,6 +51,11 @@ export default function AppHeader() {
           {PRIMARY_NAV.map((item) => (
             <Link key={item.href} href={item.href} className={navClass(item.href)}>
               {item.label}
+              {item.badge && (
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider rounded bg-red-500/20 text-red-400 border border-red-500/40">
+                  {item.badge}
+                </span>
+              )}
               {item.href === '/inventory' && inventory.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[16px] px-1 text-[9px] font-black rounded bg-brand/20 text-brand-300 border border-brand/40">{inventory.length}</span>}
             </Link>
           ))}

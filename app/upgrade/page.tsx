@@ -183,19 +183,23 @@ export default function UpgradePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Header banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-surface-dark via-surface to-surface-dark border border-white/10 p-8 shadow-2xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-bold uppercase tracking-wider">
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>Skin Upgrader</span>
+      <section className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-[#17102E] via-surface-dark to-[#2A0F1E] p-6 sm:p-8 shadow-card">
+        <div className="absolute inset-0 grid-texture opacity-30" />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 50% 80% at 15% 50%, rgba(139,92,246,0.22) 0%, transparent 60%)' }} />
+        <div className="relative">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand/10 border border-brand/40 text-brand-300 text-[11px] font-black uppercase tracking-widest">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Skin Upgrader</span>
+          </div>
+          <h1 className="mt-3 text-3xl sm:text-5xl font-black font-display text-white tracking-tighter uppercase">
+            Upgrade your <span className="metallic">skins</span>
+          </h1>
+          <p className="mt-2 text-xs sm:text-sm text-text-secondary max-w-2xl">
+            Exchange any inventory skin for a more valuable one. The win chance is
+            proportional to the value ratio with a 5% house edge — the outcome is
+            decided and saved before the wheel spins.
+          </p>
         </div>
-        <h1 className="mt-3 text-3xl sm:text-5xl font-black font-display text-white tracking-tight">
-          Upgrade your <span className="text-accent text-glow">skins</span>
-        </h1>
-        <p className="mt-2 text-sm text-text-secondary max-w-2xl">
-          Exchange any inventory skin for a more valuable one. The win chance is
-          proportional to the value ratio with a 5% house edge — the outcome is
-          decided and saved before the wheel spins.
-        </p>
       </section>
 
       {actionError && (
@@ -223,7 +227,7 @@ export default function UpgradePage() {
               </div>
             ) : inventory.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-text-muted gap-3">
-                <Shield className="w-10 h-10 opacity-30 text-accent" />
+                <Shield className="w-10 h-10 opacity-30 text-brand-300" />
                 <p className="text-sm font-semibold text-white">
                   No skins available
                 </p>
@@ -232,7 +236,7 @@ export default function UpgradePage() {
                 </p>
                 <Link
                   href="/"
-                  className="mt-2 py-2 px-4 rounded-xl bg-accent hover:bg-accent-hover text-surface-dark font-bold text-xs transition-transform hover:scale-105"
+                  className="mt-2 py-2 px-4 rounded-xl bg-brand hover:bg-brand-500 text-white font-bold text-xs transition-transform hover:scale-105"
                 >
                   Go to Cases
                 </Link>

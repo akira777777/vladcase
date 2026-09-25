@@ -116,6 +116,7 @@ function useEconomyController() {
     () => ({
       addBalance: (amount: number) => run({ type: 'credit', amount }),
       sellItem: (id: string) => run({ type: 'sell', id }),
+      sellMany: (ids: string[]) => run({ type: 'sellMany', ids }),
       removeItem: (id: string) => run({ type: 'remove', id }),
       sellAll: () => run({ type: 'sellAll' }),
       resetEconomy: () => run({ type: 'reset' }),

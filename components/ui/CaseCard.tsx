@@ -79,7 +79,7 @@ export default function CaseCard({ caseData, onOpen }: CaseCardProps) {
 
         {/* Top drop preview overlay (bottom-right) */}
         {topItem && (
-          <div className="absolute bottom-2 right-2 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 border border-white/10 backdrop-blur-sm">
+          <div className="absolute bottom-2 right-2 z-[2] flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 border border-white/10 backdrop-blur-sm group-hover:opacity-0 transition-opacity">
             <div
               className="w-1.5 h-1.5 rounded-full"
               style={{ backgroundColor: topColor, boxShadow: `0 0 6px ${topColor}` }}
@@ -92,6 +92,13 @@ export default function CaseCard({ caseData, onOpen }: CaseCardProps) {
             </span>
           </div>
         )}
+
+        {/* Hover CTA overlay */}
+        <div className="absolute inset-x-0 bottom-0 py-1.5 bg-gradient-to-r from-brand/90 to-magenta/90 text-center opacity-0 group-hover:opacity-100 transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-[3]">
+          <span className="text-[10px] font-black uppercase tracking-widest text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+            OPEN CASE
+          </span>
+        </div>
       </div>
 
       {/* Info section */}

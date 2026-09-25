@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { motion, useAnimation, useReducedMotion, useSpring } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion, useAnimation, useReducedMotion } from 'framer-motion';
 import { playRouletteTick } from '@/lib/sound';
 
 interface UpgradeWheelProps {
@@ -26,14 +26,6 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
   const rotationRef = useRef(0);
   const completionRef = useRef(onComplete);
   completionRef.current = onComplete;
-
-  // Animated counter for chance display
-  const [displayChance, setDisplayChance] = useState(0);
-  const springChance = useSpring(displayChance, { stiffness: 100, damping: 20 });
-
-  useEffect(() => {
-    setDisplayChance(chancePercent);
-  }, [chancePercent]);
 
   const greenAngle = (chancePercent / 100) * 360;
   const circumference = 2 * Math.PI * 42;
@@ -130,17 +122,17 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
         aria-hidden="true"
         className="absolute -top-3 left-1/2 -translate-x-1/2 z-20"
         style={{
-          filter: 'drop-shadow(0 0 12px rgba(34, 211, 238, 0.9))',
+          filter: 'drop-shadow(0 0 12px rgba(139, 92, 246, 0.9))',
         }}
       >
-        <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[28px] border-l-transparent border-r-transparent border-t-accent" />
+        <div className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[28px] border-l-transparent border-r-transparent border-t-brand" />
       </div>
 
       {/* Outer glow ring with pulse */}
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
-          background: 'radial-gradient(circle, transparent 60%, rgba(34, 211, 238, 0.15) 70%, transparent 80%)',
+          background: 'radial-gradient(circle, transparent 60%, rgba(139, 92, 246, 0.16) 70%, transparent 80%)',
           animation: 'pulse 3s ease-in-out infinite',
         }}
       />
@@ -150,8 +142,8 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
         className="relative w-full h-full rounded-full overflow-hidden"
         style={{
           boxShadow: `
-            0 0 0 4px rgba(34, 211, 238, 0.3),
-            0 0 30px rgba(34, 211, 238, 0.4),
+            0 0 0 4px rgba(139, 92, 246, 0.3),
+            0 0 30px rgba(139, 92, 246, 0.4),
             inset 0 0 60px rgba(0, 0, 0, 0.8),
             0 10px 40px rgba(0, 0, 0, 0.6)
           `,
@@ -200,7 +192,7 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
           })}
 
           {/* Inner ring border */}
-          <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(34, 211, 238, 0.3)" strokeWidth="1" />
+          <circle cx="50" cy="50" r="47" fill="none" stroke="rgba(139, 92, 246, 0.35)" strokeWidth="1" />
         </svg>
       </motion.div>
 
@@ -223,12 +215,12 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: progressOffset }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
-              style={{ filter: 'drop-shadow(0 0 6px rgba(34, 211, 238, 0.6))' }}
+              style={{ filter: 'drop-shadow(0 0 6px rgba(139, 92, 246, 0.6))' }}
             />
             <defs>
               <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#22d3ee" />
-                <stop offset="100%" stopColor="#06b6d4" />
+                <stop offset="0%" stopColor="#8B5CF6" />
+                <stop offset="100%" stopColor="#EC4899" />
               </linearGradient>
             </defs>
           </svg>
@@ -236,10 +228,10 @@ export const UpgradeWheel: React.FC<UpgradeWheelProps> = ({
           {/* Center content */}
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-surface-dark/95 rounded-full border border-white/10 backdrop-blur-sm">
             <motion.span
-              className="text-3xl sm:text-4xl font-black font-display leading-none bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent"
-              style={{ filter: 'drop-shadow(0 0 8px rgba(34, 211, 238, 0.4))' }}
+              className="text-3xl sm:text-4xl font-black font-display leading-none bg-gradient-to-r from-white to-brand-300 bg-clip-text text-transparent"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.4))' }}
             >
-              {springChance.get().toFixed(1)}
+              {chancePercent.toFixed(1)}
               <span className="text-base text-text-secondary">%</span>
             </motion.span>
             <span className="text-[10px] uppercase tracking-[0.25em] text-text-muted font-bold mt-2">

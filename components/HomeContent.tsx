@@ -98,14 +98,14 @@ export default function HomeContent() {
           </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <GameModeCard href="/" title="Case Opening" description="Open cases with weighted odds" icon={Package} accent="brand" count="9 active cases" />
+          <GameModeCard href="#cases" title="Case Opening" description="Open cases with weighted odds" icon={Package} accent="brand" count="7 active cases" />
+          <GameModeCard href="/battles" title="Battles" description="PvP case showdowns & 1v1 duels" icon={Swords} accent="magenta" count="Live AI Arena" />
           <GameModeCard href="/upgrade" title="Upgrader" description="Trade up to higher value" icon={TrendingUp} accent="gold" count="House edge 5%" />
-          <GameModeCard href="/contracts" title="Contracts" description="Trade 10 items for 1 higher" icon={Flame} accent="magenta" count="10/10 needed" />
-          <GameModeCard href="/inventory" title="Battles" description="PvP case showdowns" icon={Layers} accent="success" count="Coming soon" />
+          <GameModeCard href="/contracts" title="Contracts" description="Trade 10 items for 1 higher" icon={Flame} accent="success" count="Trade-Up 10/10" />
         </div>
       </section>
 
-      <section aria-label="Case catalog">
+      <section id="cases" aria-label="Case catalog">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-4">
           <div>
             <h2 className="font-display font-black text-2xl sm:text-3xl text-white uppercase tracking-tighter leading-none">
