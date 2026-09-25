@@ -18,7 +18,7 @@ test('Upgrader navigation is internal and leads to the upgrade page', async ({
   }
   await links.first().click();
   await expect(
-    page.getByRole('heading', { name: /Upgrade your/ })
+    page.getByRole('heading', { name: 'Upgrade Arena' })
   ).toBeVisible();
 });
 
@@ -37,6 +37,12 @@ test('every route has one page heading and unique element ids', async ({ page })
 test('case page title applies the site name once', async ({ page }) => {
   await page.goto('/cases/case-budget-starter');
   await expect(page).toHaveTitle('Starter Recruit | VLADCASE');
+});
+
+test('demo activity never renders an epoch-sized relative date', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText(/\d{4,}d ago/)).toHaveCount(0);
+  await expect(page.getByText(/demo showcase/i).first()).toBeVisible();
 });
 
 test('battle is charged and persisted before its animation completes', async ({ page }) => {
@@ -245,9 +251,10 @@ test('won upgrade chains into the next round with the reward preselected', async
   // Chaining: "Upgrade Again" must preselect the won Glock as the next input.
   await dialog.getByRole('button', { name: 'Upgrade Again' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Glock-18 | Water Elemental' })).toBeVisible();
   await expect(
-    page.getByText('Glock-18 | Water Elemental · $24.50')
-  ).toBeVisible();
+    page.getByRole('button', { name: /Glock-18 \| Water Elemental/ }).first()
+  ).toHaveAttribute('aria-pressed', 'true');
   // The target panel offers pricier targets for the $24.50 input immediately.
   await expect(
     page.getByRole('button', { name: 'AK-47 | Redline' }).first()

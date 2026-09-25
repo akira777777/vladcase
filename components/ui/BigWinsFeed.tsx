@@ -93,7 +93,9 @@ function BigWinCard({ win }: { win: BigWin }) {
             {formatCompactCurrency(win.item.demoValue)}
           </span>
         </div>
-        <p className="text-[9px] text-text-muted truncate" title={win.caseName}>{win.caseName} · {timeAgo(win.timestamp)}</p>
+        <p className="text-[9px] text-text-muted truncate" title={win.caseName}>
+          {win.caseName} · {win.timestamp > 0 ? timeAgo(win.timestamp) : 'Demo showcase'}
+        </p>
       </div>
     </article>
   );

@@ -476,7 +476,7 @@ export default function UpgradePage() {
               </button>
 
               <p className="text-[11px] text-text-muted text-center">
-                Outcome is pre-committed on blockchain-style RNG prior to visual wheel roll.
+                Outcome is committed to local storage before the visual wheel roll.
               </p>
             </div>
           </div>

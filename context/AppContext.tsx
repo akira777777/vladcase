@@ -37,8 +37,6 @@ function useEconomyController() {
   const [activeOpening, setActiveOpening] = useState(false);
 
   const refresh = useCallback(async () => {
-    ready.current = false;
-    setLoaded(false);
     try {
       if (!navigator.locks)
         throw new Error(
@@ -66,6 +64,8 @@ function useEconomyController() {
       setLoaded(true);
       setError(null);
     } catch (cause) {
+      ready.current = false;
+      setLoaded(false);
       setError(
         `Progress could not be loaded. Saved data was preserved. ${
           cause instanceof Error
