@@ -22,6 +22,96 @@ test('Upgrader navigation is internal and leads to the upgrade page', async ({
   ).toBeVisible();
 });
 
+test('every route has one page heading and unique element ids', async ({ page }) => {
+  for (const route of ['/', '/battles', '/upgrade', '/contracts', '/inventory', '/history', '/stats', '/settings']) {
+    await page.goto(route);
+    await expect(page.locator('main h1')).toHaveCount(1);
+    const duplicateIds = await page.locator('[id]').evaluateAll((elements) => {
+      const ids = elements.map((element) => element.id);
+      return ids.filter((id, index) => ids.indexOf(id) !== index);
+    });
+    expect(duplicateIds, `${route} contains duplicate ids`).toEqual([]);
+  }
+});
+
+test('battle is charged and persisted before its animation completes', async ({ page }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0;
+  });
+  await page.goto('/battles');
+  await page.getByRole('button', { name: /Start 1v1 Battle/i }).click();
+
+  await expect.poll(() => page.evaluate((storageKey) => {
+    const state = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    return {
+      balanceCents: state.balanceCents,
+      historyCount: state.history?.length,
+      inventoryCount: state.inventory?.length,
+    };
+  }, key)).toEqual({ balanceCents: 91300, historyCount: 3, inventoryCount: 3 });
+
+  await page.reload();
+  await expect(page.getByText('$913.00', { exact: true }).first()).toBeVisible();
+});
+
+test('daily bonus cannot be claimed again after reload', async ({ page }) => {
+  await page.goto('/contracts');
+  const claim = page.getByRole('button', { name: /250 Free Bonus/i });
+  await claim.click();
+  await expect(page.getByText('$1,250.00', { exact: true }).first()).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Claimed Today/i })).toBeDisabled();
+  await expect(page.getByText('$1,250.00', { exact: true }).first()).toBeVisible();
+});
+
+test('trade-up is persisted before the forging reveal', async ({ page }) => {
+  await page.addInitScript(
+    ({ storageKey, items }) => {
+      const rarityCounts = { Consumer: 3, Industrial: 0, 'Mil-Spec': 0, Restricted: 0, Classified: 0, Covert: 0, 'Special Item': 0 };
+      localStorage.setItem(storageKey, JSON.stringify({
+        version: 2,
+        balanceCents: 100000,
+        xp: 0,
+        inventory: items.map((item, index) => ({ ...item, instanceId: `contract-input-${index}`, unboxedAt: 1 })),
+        history: [],
+        stats: {
+          totalOpens: 0,
+          totalSpentCents: 0,
+          totalDropValueCents: 0,
+          realizedCents: 0,
+          removedValueCents: 0,
+          rarityCounts,
+          caseCounts: {},
+          currentRareStreak: 0,
+          bestRareStreak: 0,
+          bestDropInstanceId: null,
+          upgradeWins: 0,
+          upgradeLosses: 0,
+          upgradeWageredCents: 0,
+        },
+        favoriteIds: [],
+        goalIds: [],
+      }));
+    },
+    {
+      storageKey: key,
+      items: [
+        ITEMS.find((item) => item.id === 'item-nova-sanddune')!,
+        ITEMS.find((item) => item.id === 'item-p250-sanddune')!,
+        ITEMS.find((item) => item.id === 'item-mp9-sanddashed')!,
+      ],
+    }
+  );
+  await page.goto('/contracts');
+  await page.getByRole('button', { name: /Nova.*Sand Dune/i }).click();
+  await page.getByRole('button', { name: /P250.*Sand Dune/i }).click();
+  await page.getByRole('button', { name: /MP9.*Sand Dashed/i }).click();
+  await page.getByRole('button', { name: /Sign Trade-Up/i }).click();
+  await page.waitForTimeout(250);
+  expect(await page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey)!).inventory.length, key)).toBe(1);
+});
+
 test('upgrader commits the outcome before animation and survives reload', async ({
   page,
   context,
