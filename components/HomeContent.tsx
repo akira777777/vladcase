@@ -4,31 +4,32 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { CASES } from '@/data/mockData';
 import { Case } from '@/types';
-import CaseCard from '@/components/ui/CaseCard';
+import CaseCard from '@/components/case/CaseCard';
+import UICaseCard from '@/components/ui/CaseCard';
 import CategoryTabs, { type SortMode } from '@/components/ui/CategoryTabs';
 import LiveDropFeed from '@/components/ui/LiveDropFeed';
 import EventHero from '@/components/ui/EventHero';
 import GameModeCard from '@/components/ui/GameModeCard';
 import BigWinsFeed from '@/components/ui/BigWinsFeed';
 import GameStats from '@/components/ui/GameStats';
-import { Package, TrendingUp, Flame, Sparkles, ArrowRight, Swords } from 'lucide-react';
+import { Package, TrendingUp, Flame, Sparkles, ArrowRight, Swords, RotateCcw } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 const CATEGORIES = [
-  { id: 'ALL', label: 'All' },
-  { id: 'NEW', label: 'New' },
-  { id: 'POPULAR', label: 'Popular' },
-  { id: 'BUDGET', label: 'Budget' },
-  { id: 'PREMIUM', label: 'Premium' },
-  { id: 'KNIFE', label: 'Knives' },
-  { id: 'RIFLE', label: 'Rifles' },
+  { id: 'ALL', label: 'ALL' },
+  { id: 'NEW', label: 'NEW' },
+  { id: 'POPULAR', label: 'POPULAR' },
+  { id: 'BUDGET', label: 'BUDGET' },
+  { id: 'PREMIUM', label: 'PREMIUM' },
+  { id: 'KNIFE', label: 'KNIVES' },
+  { id: 'RIFLE', label: 'RIFLES' },
   { id: 'AWP', label: 'AWP' },
-  { id: 'PISTOL', label: 'Pistols' },
-  { id: 'SPECIAL', label: 'Special' },
+  { id: 'PISTOL', label: 'PISTOLS' },
+  { id: 'SPECIAL', label: 'SPECIAL' },
 ];
 
 export default function HomeContent() {
-  const { history } = useApp();
+  const { history, resetEconomy } = useApp();
   const [active, setActive] = useState('ALL');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortMode>('popular');
@@ -61,10 +62,8 @@ export default function HomeContent() {
         case 'price_asc': return a.price - b.price;
         case 'price_desc': return b.price - a.price;
         case 'popular':
-        default: {
-          const score = (c: Case) => c.items.reduce((acc, i) => acc + (i.rarity === 'Special Item' ? 1000 : i.rarity === 'Covert' ? 200 : i.rarity === 'Classified' ? 50 : 0), 0);
-          return score(b) - score(a);
-        }
+        default:
+          return 0;
       }
     });
     return list;
@@ -115,6 +114,19 @@ export default function HomeContent() {
               Open any case for a chance at knives, covert skins, and rare collectibles. All odds are transparent and committed atomically before reveal.
             </p>
           </div>
+          <button
+            type="button"
+            aria-label="Reset progress"
+            onClick={() => {
+              if (window.confirm('Reset all simulator progress to defaults?')) {
+                void resetEconomy();
+              }
+            }}
+            className="self-start md:self-end text-xs font-bold text-text-muted hover:text-red-400 border border-white/10 hover:border-red-500/30 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5 bg-surface-dark/60"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset progress</span>
+          </button>
         </div>
         <CategoryTabs categories={CATEGORIES} active={active} onChange={setActive} searchQuery={search} onSearchChange={setSearch} sort={sort} onSortChange={setSort} />
 
@@ -127,7 +139,7 @@ export default function HomeContent() {
         </div>
       </section>
 
-      {popularCases.length > 0 && (
+      {active === 'ALL' && !search.trim() && popularCases.length > 0 && (
         <section aria-label="Trending cases">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-display font-black text-lg text-white uppercase tracking-tight flex items-center gap-2">
@@ -139,7 +151,7 @@ export default function HomeContent() {
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {popularCases.map((c) => <CaseCard key={c.id} caseData={c} />)}
+            {popularCases.map((c) => <UICaseCard key={c.id} caseData={c} />)}
           </div>
         </section>
       )}

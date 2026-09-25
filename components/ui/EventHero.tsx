@@ -108,7 +108,7 @@ export default function EventHero({
 function TimeBlock({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center px-2 py-1 rounded-md bg-black/40 border border-white/10 min-w-[44px]">
-      <span className="text-lg font-black text-white price-display leading-none">
+      <span suppressHydrationWarning className="text-lg font-black text-white price-display leading-none">
         {String(value).padStart(2, '0')}
       </span>
       <span className="text-[9px] font-bold text-gold-light uppercase tracking-wider mt-0.5">{label}</span>

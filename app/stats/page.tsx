@@ -29,7 +29,7 @@ export default function StatsPage() {
   const upgradeRate = upgradeTotal > 0 ? Math.round((stats.upgradeWins / upgradeTotal) * 100) : null;
 
   const cards = [
-    { label: 'CASES OPENED', value: stats.totalOpens.toLocaleString(), icon: Target, color: 'text-brand-300', glow: 'rgba(139,92,246,0.3)' },
+    { label: 'CASES OPENED', value: stats.totalOpens.toLocaleString('en-US'), icon: Target, color: 'text-brand-300', glow: 'rgba(139,92,246,0.3)' },
     { label: 'TOTAL SPENT', value: formatCurrency(stats.totalSpentCents / 100), icon: BarChart3, color: 'text-white', glow: 'rgba(255,255,255,0.2)' },
     { label: 'DROP VALUE', value: formatCurrency(stats.totalDropValueCents / 100), icon: Trophy, color: 'text-gold', glow: 'rgba(245,182,66,0.3)' },
     { label: 'REALIZED (SOLD)', value: formatCurrency(stats.realizedCents / 100), icon: TrendingUp, color: 'text-emerald-400', glow: 'rgba(16,185,129,0.3)' },
@@ -191,7 +191,7 @@ export default function StatsPage() {
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-400" />
             <h2 className="text-sm font-display font-black text-white uppercase tracking-wider">
-              Upgrader Telemetry
+              Upgrader Performance
             </h2>
           </div>
           <Link
@@ -204,12 +204,12 @@ export default function StatsPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-4 rounded-xl bg-surface-dark border border-white/[0.06]">
-            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Upgrade Wins</span>
-            <p className="text-xl font-display font-black text-emerald-400 mt-1">{stats.upgradeWins}</p>
+            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Wins</span>
+            <p className="text-xl font-display font-black text-emerald-400 mt-1">{stats.upgradeWins.toLocaleString('en-US')}</p>
           </div>
           <div className="p-4 rounded-xl bg-surface-dark border border-white/[0.06]">
-            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Upgrade Losses</span>
-            <p className="text-xl font-display font-black text-red-400 mt-1">{stats.upgradeLosses}</p>
+            <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Losses</span>
+            <p className="text-xl font-display font-black text-red-400 mt-1">{stats.upgradeLosses.toLocaleString('en-US')}</p>
           </div>
           <div className="p-4 rounded-xl bg-surface-dark border border-white/[0.06]">
             <span className="text-[9px] font-black uppercase tracking-widest text-text-muted">Win Rate</span>

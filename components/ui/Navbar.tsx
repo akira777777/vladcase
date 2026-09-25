@@ -44,10 +44,10 @@ export default function AppHeader() {
   const handleAddBalance = () => { playCashSound(); void addBalance(500); };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] bg-ink-900/85 backdrop-blur-xl">
+    <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.06] bg-ink-900/85 backdrop-blur-xl">
       <div className="mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 h-[60px] flex items-center justify-between gap-4">
         <Link href="/" aria-label="VLADCASE home" className="flex-shrink-0"><VladcaseLogo size="md" /></Link>
-        <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+        <div className="hidden lg:flex items-center gap-1 flex-1 justify-center">
           {PRIMARY_NAV.map((item) => (
             <Link key={item.href} href={item.href} className={navClass(item.href)}>
               {item.label}
@@ -61,7 +61,7 @@ export default function AppHeader() {
           ))}
           <div className="w-px h-5 bg-white/10 mx-2" />
           {SECONDARY_NAV.map((item) => <Link key={item.href} href={item.href} className={navClass(item.href)}>{item.label}</Link>)}
-        </nav>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-dark border border-white/[0.06]">
             <div className="flex flex-col leading-none">
@@ -115,6 +115,6 @@ export default function AppHeader() {
           </div>
         </div>
       )}
-    </header>
+    </nav>
   );
 }

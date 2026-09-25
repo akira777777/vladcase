@@ -222,12 +222,16 @@ export function validateSnapshot(value: unknown): Snapshot {
     inventory,
     history: entries,
     stats: stats(value.stats),
-    favoriteIds: stringList(value.favoriteIds, 'favorites'),
-    goalIds: stringList(value.goalIds, 'goals'),
+    favoriteIds:
+      value.favoriteIds === undefined
+        ? []
+        : stringList(value.favoriteIds, 'favorites'),
+    goalIds:
+      value.goalIds === undefined ? [] : stringList(value.goalIds, 'goals'),
   };
 }
 
-function migrateV1(value: unknown): Snapshot {
+export function migrateV1(value: unknown): Snapshot {
   record(value);
   if (value.version !== 1) throw new Error('Unsupported saved version');
   if (!Number.isSafeInteger(value.balanceCents) || (value.balanceCents as number) < 0)
@@ -255,7 +259,7 @@ export function readSnapshot(storage: Pick<Storage, 'getItem'>): Snapshot {
     if (parsed && typeof parsed === 'object' && (parsed as { version?: unknown }).version === 1) {
       return migrateV1(parsed);
     }
-    return validateSnapshot(parsed);
+    return parseSnapshot(parsed);
   }
   const legacy = storage.getItem(LEGACY_STORAGE_KEY);
   if (legacy !== null) return migrateV1(JSON.parse(legacy));
@@ -272,6 +276,13 @@ export function readSnapshot(storage: Pick<Storage, 'getItem'>): Snapshot {
     inventory: read('inventory', []),
     history: read('history', []),
   });
+}
+
+export function parseSnapshot(value: unknown): Snapshot {
+  if (value && typeof value === 'object' && (value as { version?: unknown }).version === 1) {
+    return migrateV1(value);
+  }
+  return validateSnapshot(value);
 }
 
 export type Command =
@@ -323,9 +334,13 @@ function openMany(
   let bestRareStreak = state.stats.bestRareStreak;
   let bestDropInstanceId = state.stats.bestDropInstanceId;
   let bestDropValueCents = -1;
-  if (state.history[0]?.item.instanceId) {
-    bestDropInstanceId = state.history[0].item.instanceId;
-    bestDropValueCents = state.history[0].itemValueCents;
+  if (bestDropInstanceId) {
+    const existingBest = state.history.find(
+      (entry) => entry.item.instanceId === bestDropInstanceId
+    );
+    if (existingBest) {
+      bestDropValueCents = existingBest.itemValueCents;
+    }
   }
   for (const entry of entries) {
     rarityCounts[entry.item.rarity] += 1;

@@ -17,10 +17,10 @@ export default function GameStats({
   className = '',
 }: GameStatsProps) {
   const stats = [
-    { label: 'CASES OPENED', value: casesOpened.toLocaleString(), icon: Package, color: 'text-brand-300', glow: 'rgba(139, 92, 246, 0.4)' },
-    { label: 'ITEMS WON', value: itemsWon.toLocaleString(), icon: Layers, color: 'text-emerald-400', glow: 'rgba(16, 185, 129, 0.4)' },
-    { label: 'CONTRACTS', value: contracts.toLocaleString(), icon: Flame, color: 'text-magenta-400', glow: 'rgba(236, 72, 153, 0.4)' },
-    { label: 'UPGRADES', value: upgrades.toLocaleString(), icon: TrendingUp, color: 'text-gold-light', glow: 'rgba(245, 182, 66, 0.4)' },
+    { label: 'CASES OPENED', value: casesOpened.toLocaleString('en-US'), icon: Package, color: 'text-brand-300', glow: 'rgba(139, 92, 246, 0.4)' },
+    { label: 'ITEMS WON', value: itemsWon.toLocaleString('en-US'), icon: Layers, color: 'text-emerald-400', glow: 'rgba(16, 185, 129, 0.4)' },
+    { label: 'CONTRACTS', value: contracts.toLocaleString('en-US'), icon: Flame, color: 'text-magenta-400', glow: 'rgba(236, 72, 153, 0.4)' },
+    { label: 'UPGRADES', value: upgrades.toLocaleString('en-US'), icon: TrendingUp, color: 'text-gold-light', glow: 'rgba(245, 182, 66, 0.4)' },
   ];
 
   return (

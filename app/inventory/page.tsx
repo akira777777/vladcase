@@ -17,7 +17,7 @@ const SORT_LABELS: Record<string, string> = {
 const RANK: Record<Rarity, number> = { 'Special Item': 7, Covert: 6, Classified: 5, Restricted: 4, 'Mil-Spec': 3, Industrial: 2, Consumer: 1 };
 
 export default function InventoryPage() {
-  const { inventory, favoriteIds, toggleFavorite, sellItem, sellMany } = useInventory();
+  const { inventory, favoriteIds, toggleFavorite, sellItem, sellMany, sellAll } = useInventory();
   const { preferences } = usePreferences();
   const [visibleCount, setVisibleCount] = useState(48);
   const [filterRarity, setFilterRarity] = useState<string>('ALL');
@@ -87,6 +87,13 @@ export default function InventoryPage() {
     void sellItem(item.instanceId!);
   };
 
+  const handleSellAll = async () => {
+    if (inventory.length === 0) return;
+    if (!window.confirm(`Sell all ${inventory.length} items for ${formatCurrency(totalValuation)}?`)) return;
+    playCashSound();
+    await sellAll();
+  };
+
   const handleSellSelected = async () => {
     if (selectedIds.size === 0 || bulkBusy) return;
     if (preferences.confirmSales && !window.confirm(`Sell ${selectedIds.size} items for ${formatCurrency(selectedValue)}?`)) return;
@@ -105,14 +112,24 @@ export default function InventoryPage() {
           <h1 className="text-3xl sm:text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">Inventory</h1>
           <p className="mt-2 text-xs text-text-secondary max-w-2xl">Every weapon you unbox is stored locally in this browser. Sell, favorite, or build your collection.</p>
         </div>
-        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-text-secondary hover:text-white">← Back to cases</Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSellAll}
+            disabled={inventory.length === 0}
+            className="btn-danger text-xs px-3.5 py-2 inline-flex items-center gap-1.5"
+          >
+            Sell All
+          </button>
+          <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-text-secondary hover:text-white">← Back to cases</Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatTile label="ITEMS" value={inventory.length.toLocaleString()} icon={Package} color="text-brand-300" glow="rgba(139, 92, 246, 0.45)" />
+        <StatTile label="ITEMS" value={inventory.length.toLocaleString('en-US')} icon={Package} color="text-brand-300" glow="rgba(139, 92, 246, 0.45)" />
         <StatTile label="NET WORTH" value={formatCurrency(totalValuation)} icon={Trophy} color="text-gold-light" glow="rgba(245, 182, 66, 0.45)" />
-        <StatTile label="FAVORITES" value={favoriteIds.length.toLocaleString()} icon={Heart} color="text-magenta-400" glow="rgba(236, 72, 153, 0.45)" />
-        <StatTile label="SELECTED" value={selectedIds.size.toLocaleString()} icon={Layers} color="text-emerald-400" glow="rgba(16, 185, 129, 0.45)" />
+        <StatTile label="FAVORITES" value={favoriteIds.length.toLocaleString('en-US')} icon={Heart} color="text-magenta-400" glow="rgba(236, 72, 153, 0.45)" />
+        <StatTile label="SELECTED" value={selectedIds.size.toLocaleString('en-US')} icon={Layers} color="text-emerald-400" glow="rgba(16, 185, 129, 0.45)" />
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 panel-raised p-3">
@@ -121,7 +138,7 @@ export default function InventoryPage() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
             <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search items or weapons" aria-label="Search inventory" className="w-full pl-8 pr-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white placeholder:text-text-muted focus:outline-none focus:border-brand/50" />
           </div>
-          <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} aria-label="Filter by rarity" className="pl-3 pr-7 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
+          <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} aria-label="Filter rarity" className="pl-3 pr-7 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
             <option value="ALL">All rarities</option>
             {RARITIES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
@@ -152,7 +169,7 @@ export default function InventoryPage() {
             {selectedIds.size >= Math.min(sortedItems.length, visibleCount) && sortedItems.length > 0 ? 'Deselect all' : 'Select all'}
           </button>
           <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort items" className="px-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort inventory" className="px-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
             {Object.entries(SORT_LABELS).map(([k, label]) => <option key={k} value={k}>Sort: {label}</option>)}
           </select>
         </div>
@@ -161,8 +178,17 @@ export default function InventoryPage() {
       {sortedItems.length === 0 ? (
         <div className="text-center py-20 panel">
           <Package className="w-12 h-12 text-text-muted mx-auto mb-3 opacity-50" />
-          <p className="text-text-secondary font-bold">No items match this view</p>
-          <p className="text-xs text-text-muted mt-1">Open a case to start collecting weapons.</p>
+          {inventory.length === 0 ? (
+            <>
+              <h3 className="text-text-secondary font-bold text-lg">No items in your inventory</h3>
+              <p className="text-xs text-text-muted mt-1">Open a case to start collecting weapons.</p>
+            </>
+          ) : (
+            <>
+              <h3 className="text-text-secondary font-bold text-lg">No items match your filters</h3>
+              <p className="text-xs text-text-muted mt-1">Try resetting the search or rarity filter.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">

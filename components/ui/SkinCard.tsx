@@ -50,15 +50,15 @@ export default function SkinCard({
 
   return (
     <div
-      onClick={() => selectable && onClick?.(item)}
-      role={selectable ? 'button' : undefined}
-      tabIndex={selectable ? 0 : undefined}
+      onClick={() => onClick?.(item)}
+      role={selectable || onClick ? 'button' : undefined}
+      tabIndex={selectable || onClick ? 0 : undefined}
       aria-pressed={selectable ? selected : undefined}
       className={`group relative flex flex-col rounded-lg border transition-all overflow-hidden panel-v ${
         selected
           ? 'border-brand bg-brand/10 shadow-glow-brand'
           : 'border-white/[0.06] bg-surface-dark hover:border-white/20 hover:bg-surface-raised'
-      } ${selectable ? 'cursor-pointer' : ''} ${padding} ${className}`}
+      } ${selectable || onClick ? 'cursor-pointer' : ''} ${padding} ${className}`}
       style={!selected ? { boxShadow: `inset 3px 0 0 ${rarityColor}80` } : undefined}
     >
       {/* Rarity top accent line */}
@@ -125,9 +125,9 @@ export default function SkinCard({
 
       {/* Meta info */}
       <div className="flex-1 flex flex-col gap-1">
-        <p className="text-[11px] font-bold text-white leading-tight truncate" title={item.name}>
+        <h4 className="text-[11px] font-bold text-white leading-tight truncate" title={item.name}>
           {item.name}
-        </p>
+        </h4>
         <div className="flex items-center justify-between gap-1">
           <RarityBadge rarity={item.rarity} size="xs" />
           {showChance && (

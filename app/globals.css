@@ -36,6 +36,7 @@ button:disabled {
 html, body {
   background-color: #090A0F;
   color: #F5F7FA;
+  overflow-x: hidden;
 }
 
 body {

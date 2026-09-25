@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useApp } from '@/context/AppContext';
 import { usePreferences } from '@/hooks/usePreferences';
-import { validateSnapshot } from '@/lib/economy';
+import { parseSnapshot } from '@/lib/economy';
 import {
   ArrowLeft,
   Download,
@@ -39,7 +39,7 @@ export default function SettingsPage() {
 
   const importProgress = async (file: File) => {
     try {
-      const value = validateSnapshot(JSON.parse(await file.text()));
+      const value = parseSnapshot(JSON.parse(await file.text()));
       localStorage.setItem('vladcase_state_v2', JSON.stringify(value));
       setMessage('Progress imported. Reloading application...');
       setTimeout(() => window.location.reload(), 600);

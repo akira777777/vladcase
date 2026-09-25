@@ -19,12 +19,12 @@ interface BigWinsFeedProps {
 }
 
 const DEMO_WINS: BigWin[] = [
-  { id: 'w1', user: 'shadowkill', item: { id: 'w1i', name: 'Karambit | Doppler Phase 2', weaponType: 'Knife', image: '/assets/item-knife-doppler.webp', rarity: 'Special Item', demoValue: 1850, dropChance: 0.25 }, caseName: 'Doppler Vault', timestamp: Date.now() - 120_000 },
-  { id: 'w2', user: 'vortex', item: { id: 'w2i', name: 'AWP | Dragon Lore', weaponType: 'AWP', image: '/assets/item-awp-dragonlore.webp', rarity: 'Special Item', demoValue: 9500, dropChance: 0.05 }, caseName: 'High Roller Vault', multiplier: 12, timestamp: Date.now() - 240_000 },
-  { id: 'w3', user: 'fade', item: { id: 'w3i', name: 'Butterfly Knife | Sapphire', weaponType: 'Knife', image: '/assets/item-knife-sapphire.webp', rarity: 'Special Item', demoValue: 4200, dropChance: 0.1 }, caseName: 'Waifu & Anime', multiplier: 8, timestamp: Date.now() - 360_000 },
-  { id: 'w4', user: 'kyo', item: { id: 'w4i', name: 'M4A4 | Howl', weaponType: 'M4A4', image: '/assets/item-m4-howl.webp', rarity: 'Covert', demoValue: 4200, dropChance: 0.2 }, caseName: 'High Roller Vault', timestamp: Date.now() - 480_000 },
-  { id: 'w5', user: 'nyxer', item: { id: 'w5i', name: 'AWP | Gungnir', weaponType: 'AWP', image: '/assets/item-awp-gungnir.webp', rarity: 'Special Item', demoValue: 5800, dropChance: 0.05 }, caseName: 'High Roller Vault', multiplier: 15, timestamp: Date.now() - 600_000 },
-  { id: 'w6', user: 'rush_b', item: { id: 'w6i', name: 'Butterfly Knife | Fade', weaponType: 'Knife', image: '/assets/item-knife-fade.webp', rarity: 'Special Item', demoValue: 3200, dropChance: 0.15 }, caseName: 'Doppler Vault', timestamp: Date.now() - 720_000 },
+  { id: 'w1', user: 'shadowkill', item: { id: 'w1i', name: 'Karambit | Doppler Phase 2', weaponType: 'Knife', image: '/assets/item-knife-doppler.webp', rarity: 'Special Item', demoValue: 1850, dropChance: 0.25 }, caseName: 'Doppler Vault', timestamp: 0 },
+  { id: 'w2', user: 'vortex', item: { id: 'w2i', name: 'AWP | Dragon Lore', weaponType: 'AWP', image: '/assets/item-awp-dragonlore.webp', rarity: 'Special Item', demoValue: 9500, dropChance: 0.05 }, caseName: 'High Roller Vault', multiplier: 12, timestamp: 0 },
+  { id: 'w3', user: 'fade', item: { id: 'w3i', name: 'Butterfly Knife | Sapphire', weaponType: 'Knife', image: '/assets/item-knife-sapphire.webp', rarity: 'Special Item', demoValue: 4200, dropChance: 0.1 }, caseName: 'Waifu & Anime', multiplier: 8, timestamp: 0 },
+  { id: 'w4', user: 'kyo', item: { id: 'w4i', name: 'M4A4 | Howl', weaponType: 'M4A4', image: '/assets/item-m4-howl.webp', rarity: 'Covert', demoValue: 4200, dropChance: 0.2 }, caseName: 'High Roller Vault', timestamp: 0 },
+  { id: 'w5', user: 'nyxer', item: { id: 'w5i', name: 'AWP | Gungnir', weaponType: 'AWP', image: '/assets/item-awp-gungnir.webp', rarity: 'Special Item', demoValue: 5800, dropChance: 0.05 }, caseName: 'High Roller Vault', multiplier: 15, timestamp: 0 },
+  { id: 'w6', user: 'rush_b', item: { id: 'w6i', name: 'Butterfly Knife | Fade', weaponType: 'Knife', image: '/assets/item-knife-fade.webp', rarity: 'Special Item', demoValue: 3200, dropChance: 0.15 }, caseName: 'Doppler Vault', timestamp: 0 },
 ];
 
 export default function BigWinsFeed({ wins, className = '' }: BigWinsFeedProps) {

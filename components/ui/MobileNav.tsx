@@ -18,7 +18,8 @@ export default function MobileNav() {
   const { inventory } = useInventory();
 
   return (
-    <nav
+    <div
+      role="navigation"
       aria-label="Mobile Navigation"
       className="lg:hidden fixed bottom-0 inset-x-0 z-50 h-[58px] bg-ink-950/95 backdrop-blur-xl border-t border-white/[0.08] px-2 flex items-center justify-around select-none safe-bottom"
     >
@@ -58,6 +59,6 @@ export default function MobileNav() {
           </Link>
         );
       })}
-    </nav>
+    </div>
   );
 }
