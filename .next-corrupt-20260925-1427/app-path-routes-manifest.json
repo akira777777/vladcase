@@ -1,0 +1,15 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/robots.txt/route": "/robots.txt",
+  "/manifest.webmanifest/route": "/manifest.webmanifest",
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/contracts/page": "/contracts",
+  "/page": "/",
+  "/inventory/page": "/inventory",
+  "/battles/page": "/battles",
+  "/stats/page": "/stats",
+  "/history/page": "/history",
+  "/settings/page": "/settings",
+  "/upgrade/page": "/upgrade",
+  "/cases/[caseId]/page": "/cases/[caseId]"
+}
