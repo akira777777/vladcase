@@ -17,17 +17,14 @@ import {
   TrendingUp,
   Shield,
   Zap,
-  ArrowRight,
   Sparkles,
   Search,
-  SlidersHorizontal,
   Flame,
   CheckCircle2,
   XCircle,
-  HelpCircle,
   RefreshCw,
 } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 
 const MULTIPLIERS = [1.5, 2, 5, 10, 20, 50, 100] as const;
 

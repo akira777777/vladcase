@@ -124,6 +124,8 @@ function useEconomyController() {
       toggleGoal: (id: string) => run({ type: 'toggleGoal', id }),
       tradeUpContract: (inputIds: string[], rewardItem: Item) =>
         run({ type: 'contract', inputIds, rewardItem }),
+      startBattle: (cases: Case[]) => run({ type: 'battle', cases }),
+      claimDailyBonus: () => run({ type: 'claimDailyBonus' }),
       upgradeItem: (inputId: string, targetItem: Item) =>
         run({ type: 'upgrade', inputId, targetItem }),
       openCase: async (caseData: Case): Promise<Result> => {

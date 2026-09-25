@@ -33,6 +33,7 @@ export interface Snapshot {
   stats: LifetimeStats;
   favoriteIds: string[];
   goalIds: string[];
+  lastDailyBonusDay: string | null;
 }
 
 export const initialState = (): Snapshot => ({
@@ -44,6 +45,7 @@ export const initialState = (): Snapshot => ({
   stats: emptyStats(),
   favoriteIds: [],
   goalIds: [],
+  lastDailyBonusDay: null,
 });
 
 function record(value: unknown): asserts value is Record<string, unknown> {
@@ -228,6 +230,15 @@ export function validateSnapshot(value: unknown): Snapshot {
         : stringList(value.favoriteIds, 'favorites'),
     goalIds:
       value.goalIds === undefined ? [] : stringList(value.goalIds, 'goals'),
+    lastDailyBonusDay:
+      value.lastDailyBonusDay === undefined || value.lastDailyBonusDay === null
+        ? null
+        : typeof value.lastDailyBonusDay === 'string' &&
+            /^\d{4}-\d{2}-\d{2}$/.test(value.lastDailyBonusDay)
+          ? value.lastDailyBonusDay
+          : (() => {
+              throw new Error('Invalid daily bonus date');
+            })(),
   };
 }
 
@@ -294,13 +305,35 @@ export type Command =
   | { type: 'sellAll' | 'reset' }
   | { type: 'toggleFavorite' | 'toggleGoal'; id: string }
   | { type: 'contract'; inputIds: string[]; rewardItem: Item }
-  | { type: 'upgrade'; inputId: string; targetItem: Item };
+  | { type: 'upgrade'; inputId: string; targetItem: Item }
+  | { type: 'battle'; cases: Case[] }
+  | { type: 'claimDailyBonus' };
+
+export interface BattleOutcome {
+  winner: 'user' | 'bot' | 'draw';
+  userDrops: Item[];
+  botDrops: Item[];
+  awardedItems: Item[];
+  entryCostCents: number;
+}
 
 export type Result =
-  | { ok: true; item?: Item; items?: Item[]; upgrade?: UpgradeOutcome }
+  | {
+      ok: true;
+      item?: Item;
+      items?: Item[];
+      upgrade?: UpgradeOutcome;
+      battle?: BattleOutcome;
+    }
   | {
       ok: false;
-      code: 'funds' | 'missing' | 'storage' | 'unavailable' | 'invalid';
+      code:
+        | 'funds'
+        | 'missing'
+        | 'storage'
+        | 'unavailable'
+        | 'invalid'
+        | 'claimed';
       message: string;
     };
 
@@ -393,6 +426,7 @@ export function transition(
   let awarded: Item | undefined;
   let items: Item[] | undefined;
   let upgrade: UpgradeOutcome | undefined;
+  let battle: BattleOutcome | undefined;
   switch (command.type) {
     case 'open':
     case 'openMany': {
@@ -415,6 +449,25 @@ export function transition(
         balanceCents: safeTotal(state.balanceCents + cents(command.amount)),
       };
       break;
+    case 'claimDailyBonus': {
+      const day = new Date(env?.now() ?? Date.now()).toISOString().slice(0, 10);
+      if (state.lastDailyBonusDay === day) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'claimed',
+            message: 'Daily bonus already claimed. Come back tomorrow.',
+          },
+        };
+      }
+      next = {
+        ...state,
+        balanceCents: safeTotal(state.balanceCents + 25000),
+        lastDailyBonusDay: day,
+      };
+      break;
+    }
     case 'sell':
     case 'remove': {
       const target = state.inventory.find(
@@ -625,6 +678,71 @@ export function transition(
       upgrade = { chance, won, inputItem: target };
       break;
     }
+    case 'battle': {
+      if (command.cases.length < 1 || command.cases.length > 20) {
+        return {
+          state,
+          result: {
+            ok: false,
+            code: 'invalid',
+            message: 'A battle must contain between 1 and 20 cases.',
+          },
+        };
+      }
+      const entryCostCents = command.cases.reduce(
+        (total, caseData) => safeTotal(total + cents(caseData.price)),
+        0
+      );
+      if (entryCostCents > state.balanceCents) {
+        return {
+          state,
+          result: { ok: false, code: 'funds', message: 'Insufficient funds.' },
+        };
+      }
+
+      const userDrops: Item[] = [];
+      let openedState = state;
+      for (const caseData of command.cases) {
+        const opened = openMany(openedState, caseData, 1, env);
+        openedState = opened.state;
+        userDrops.push(opened.items[0]);
+      }
+      const botDrops = command.cases.map((caseData) => openCase(caseData, env));
+      const userValueCents = userDrops.reduce(
+        (total, drop) => safeTotal(total + cents(drop.demoValue)),
+        0
+      );
+      const botValueCents = botDrops.reduce(
+        (total, drop) => safeTotal(total + cents(drop.demoValue)),
+        0
+      );
+      const winner =
+        userValueCents > botValueCents
+          ? 'user'
+          : botValueCents > userValueCents
+            ? 'bot'
+            : 'draw';
+      const awardedItems =
+        winner === 'user' ? [...userDrops, ...botDrops] : winner === 'draw' ? userDrops : [];
+      const userDropIds = new Set(userDrops.map((drop) => drop.instanceId));
+      next = {
+        ...openedState,
+        inventory: [
+          ...awardedItems,
+          ...openedState.inventory.filter(
+            (entry) => !userDropIds.has(entry.instanceId)
+          ),
+        ],
+      };
+      battle = {
+        winner,
+        userDrops,
+        botDrops,
+        awardedItems,
+        entryCostCents,
+      };
+      break;
+    }
     case 'reset':
       next = initialState();
       break;
@@ -632,7 +750,7 @@ export function transition(
   validateSnapshot(next);
   return {
     state: next,
-    result: { ok: true, item: awarded, items, upgrade },
+    result: { ok: true, item: awarded, items, upgrade, battle },
   };
 }
 

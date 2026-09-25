@@ -125,6 +125,102 @@ describe('economy transactions', () => {
     ).toThrow();
     expect(saved.getItem(STORAGE_KEY)).toBeNull();
   });
+
+  it('commits a winning battle before reveal and awards both sides of the pot', () => {
+    const saved = storage();
+    let randomIndex = 0;
+    let id = 0;
+    const battleCase = {
+      ...sample,
+      price: 10,
+      items: [
+        { ...sample.items[0], id: 'low', name: 'Low', demoValue: 1, dropChance: 1 },
+        { ...sample.items[0], id: 'high', name: 'High', demoValue: 100, dropChance: 1 },
+      ],
+    };
+    const change = commit(
+      saved,
+      { type: 'battle', cases: [battleCase] },
+      {
+        random: () => [0.75, 0.25][randomIndex++],
+        now: () => 100,
+        id: () => `battle-${++id}`,
+      }
+    );
+
+    expect(change.result.ok).toBe(true);
+    if (!change.result.ok) return;
+    expect(change.result.battle).toMatchObject({ winner: 'user', entryCostCents: 1000 });
+    expect(change.result.battle?.userDrops.map((item) => item.id)).toEqual(['high']);
+    expect(change.result.battle?.botDrops.map((item) => item.id)).toEqual(['low']);
+    const next = readSnapshot(saved);
+    expect(next.balanceCents).toBe(99000);
+    expect(next.inventory.map((item) => item.instanceId)).toEqual([
+      'battle-1',
+      'battle-2',
+    ]);
+    expect(next.history).toHaveLength(1);
+  });
+
+  it('charges a lost battle atomically without awarding temporary drops', () => {
+    const saved = storage();
+    let randomIndex = 0;
+    let id = 0;
+    const battleCase = {
+      ...sample,
+      price: 10,
+      items: [
+        { ...sample.items[0], id: 'low', name: 'Low', demoValue: 1, dropChance: 1 },
+        { ...sample.items[0], id: 'high', name: 'High', demoValue: 100, dropChance: 1 },
+      ],
+    };
+    const change = commit(
+      saved,
+      { type: 'battle', cases: [battleCase] },
+      {
+        random: () => [0.25, 0.75][randomIndex++],
+        now: () => 100,
+        id: () => `battle-${++id}`,
+      }
+    );
+
+    expect(change.result.ok).toBe(true);
+    if (!change.result.ok) return;
+    expect(change.result.battle?.winner).toBe('bot');
+    const next = readSnapshot(saved);
+    expect(next.balanceCents).toBe(99000);
+    expect(next.inventory).toHaveLength(0);
+    expect(next.history).toHaveLength(1);
+  });
+
+  it('rejects an unaffordable battle without rolling or changing storage', () => {
+    const saved = storage({
+      [STORAGE_KEY]: JSON.stringify({ ...initialState(), balanceCents: 1 }),
+    });
+    const before = saved.getItem(STORAGE_KEY);
+    expect(
+      commit(saved, { type: 'battle', cases: [sample] }, env).result
+    ).toMatchObject({ ok: false, code: 'funds' });
+    expect(saved.getItem(STORAGE_KEY)).toBe(before);
+  });
+
+  it('allows the daily bonus once per UTC day across reloads', () => {
+    const saved = storage();
+    const today = { ...env, now: () => Date.UTC(2026, 8, 25, 12) };
+    const first = commit(saved, { type: 'claimDailyBonus' }, today);
+    const second = commit(saved, { type: 'claimDailyBonus' }, today);
+
+    expect(first.result).toMatchObject({ ok: true });
+    expect(second.result).toMatchObject({ ok: false, code: 'claimed' });
+    expect(readSnapshot(saved).balanceCents).toBe(125000);
+
+    const tomorrow = commit(saved, { type: 'claimDailyBonus' }, {
+      ...today,
+      now: () => Date.UTC(2026, 8, 26, 12),
+    });
+    expect(tomorrow.result).toMatchObject({ ok: true });
+    expect(readSnapshot(saved).balanceCents).toBe(150000);
+  });
 });
 describe('saved progress', () => {
   it('migrates duplicate catalog items with distinct stable IDs and retains legacy keys', () => {
