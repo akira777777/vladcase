@@ -131,7 +131,7 @@ export default function SkinCard({
         <div className="flex items-center justify-between gap-1">
           <RarityBadge rarity={item.rarity} size="xs" />
           {showChance && (
-            <span className="text-[9px] font-mono font-bold text-text-muted">
+            <span className="text-[10px] font-mono font-black text-brand-200 bg-brand/20 px-1.5 py-0.5 rounded border border-brand/40">
               {item.dropChance.toFixed(2)}%
             </span>
           )}

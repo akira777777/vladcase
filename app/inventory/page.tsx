@@ -137,6 +137,20 @@ export default function InventoryPage() {
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const visible = sortedItems.slice(0, visibleCount);
+              if (selectedIds.size >= visible.length && visible.length > 0) {
+                setSelectedIds(new Set());
+              } else {
+                setSelectedIds(new Set(visible.map((it) => it.instanceId!).filter(Boolean)));
+              }
+            }}
+            className="px-3 py-2 rounded-lg text-xs font-bold border border-white/[0.06] bg-surface-dark text-text-secondary hover:text-white transition-colors"
+          >
+            {selectedIds.size >= Math.min(sortedItems.length, visibleCount) && sortedItems.length > 0 ? 'Deselect all' : 'Select all'}
+          </button>
           <ArrowUpDown className="w-3.5 h-3.5 text-text-muted" />
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort items" className="px-3 py-2 rounded-lg text-xs bg-surface-dark border border-white/[0.06] text-white appearance-none focus:outline-none focus:border-brand/50 cursor-pointer">
             {Object.entries(SORT_LABELS).map(([k, label]) => <option key={k} value={k}>Sort: {label}</option>)}

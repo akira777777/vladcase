@@ -49,10 +49,6 @@ export default function CaseOpenPage({ caseId }: { caseId: string }) {
 
   const topItem = sortedContents[0];
   const topColor = topItem ? getRarityColor(topItem.rarity) : '#8B5CF6';
-  const totalChance = useMemo(
-    () => (caseItem ? caseItem.items.reduce((s, i) => s + i.dropChance, 0) : 0),
-    [caseItem]
-  );
 
   const closeAll = useCallback(() => {
     setShowWin(false);

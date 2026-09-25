@@ -11,7 +11,7 @@ import EventHero from '@/components/ui/EventHero';
 import GameModeCard from '@/components/ui/GameModeCard';
 import BigWinsFeed from '@/components/ui/BigWinsFeed';
 import GameStats from '@/components/ui/GameStats';
-import { Package, TrendingUp, Flame, Layers, Sparkles, ArrowRight, Swords } from 'lucide-react';
+import { Package, TrendingUp, Flame, Sparkles, ArrowRight, Swords } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 const CATEGORIES = [

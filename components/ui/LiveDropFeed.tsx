@@ -10,8 +10,10 @@ interface LiveDropFeedProps { drops?: DropEntry[]; className?: string; }
 
 const DEMO_USERS = ['vladcase_user', 'shadowkill', 'akira', 'snipez', 'rush_b', 'kyo', 'phoenix', 'nyxer', 'drk', 'omega_p', 'lethal', 'rushhh', 'kira_x', 'fade', 'vortex', 's1mple_fan', 'fl0m_', 'zeus_', 'niko', 'donk99', 'magixx', 'sh1ro'];
 
+const DEMO_TIME_BASE = 1760000000000;
+
 function generateDrop(item: Item, caseName: string, i: number): DropEntry {
-  return { id: `demo-${i}`, item, caseName, user: DEMO_USERS[i % DEMO_USERS.length], timestamp: Date.now() - i * 23000 - Math.floor(Math.random() * 18000) };
+  return { id: `demo-${i}`, item, caseName, user: DEMO_USERS[i % DEMO_USERS.length], timestamp: DEMO_TIME_BASE - i * 23000 };
 }
 
 const DEMO_POOL: Array<{ item: Item; caseName: string }> = [
@@ -81,7 +83,7 @@ function DropCard({ entry }: { entry: DropEntry }) {
           <span className="text-[10px] text-text-muted truncate">{entry.user}</span>
         </div>
         <p className="text-xs font-bold text-white truncate leading-tight mt-0.5" title={entry.item.name}>{entry.item.name}</p>
-        <p className="text-[10px] text-text-muted truncate" title={entry.caseName}>{entry.caseName} · {timeAgo(entry.timestamp)}</p>
+        <p className="text-[10px] text-text-muted truncate" title={entry.caseName}>{entry.caseName} · {entry.id.startsWith('demo-') ? 'just now' : timeAgo(entry.timestamp)}</p>
       </div>
       <div className="flex-shrink-0 text-right">
         <p className={`text-xs font-black price-display ${isTop ? 'metallic-gold' : ''}`} style={!isTop ? { color: tier === 'high' ? '#EC4899' : '#10B981' } : undefined}>

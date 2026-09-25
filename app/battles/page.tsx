@@ -1,31 +1,25 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { CASES } from '@/data/mockData';
 import { Case, Item } from '@/types';
 import ItemImage from '@/components/ui/ItemImage';
 import PriceTag from '@/components/ui/PriceTag';
 import { useEconomy } from '@/hooks/useEconomy';
-import { useInventory } from '@/hooks/useInventory';
-import { useApp } from '@/context/AppContext';
-import { formatCurrency, getRarityColor, getRarityTier } from '@/lib/utils';
+import { formatCurrency, getRarityColor } from '@/lib/utils';
 import { openCase } from '@/lib/caseLogic';
-import { playClickSound, playWinSound, playRouletteTick, playCashSound } from '@/lib/sound';
+import { playClickSound, playWinSound, playRouletteTick } from '@/lib/sound';
 import {
   Swords,
   Trophy,
   ArrowLeft,
-  Plus,
-  Zap,
   RotateCcw,
-  Sparkles,
   Bot,
   User,
   ShieldCheck,
   Flame,
-  CheckCircle2,
   XCircle,
 } from 'lucide-react';
 
@@ -48,7 +42,6 @@ const BOT_NAMES = [
 
 export default function BattlesPage() {
   const { balance, isLoaded } = useEconomy();
-  const { isLoaded: appLoaded } = useApp();
 
   const presets: BattlePreset[] = useMemo(() => {
     const starter = CASES.find((c) => c.id === 'case-starter-militia') || CASES[0];
@@ -106,9 +99,10 @@ export default function BattlesPage() {
   const [activeRoll, setActiveRoll] = useState(false);
   const [winner, setWinner] = useState<'user' | 'bot' | 'draw' | null>(null);
 
-  // Quick custom case selector
-  const [customCases, setCustomCases] = useState<Case[]>([]);
-  const [isCustomMode, setIsCustomMode] = useState(false);
+  // Custom lineups are represented by presets until arbitrary battle entries
+  // are supported by the atomic economy transition.
+  const customCases: Case[] = [];
+  const isCustomMode = false;
 
   const activeCases = isCustomMode ? customCases : selectedPreset.cases;
   const totalCost = activeCases.reduce((sum, c) => sum + c.price, 0);
@@ -131,10 +125,10 @@ export default function BattlesPage() {
     setActiveRoll(true);
 
     // Simulate round by round
-    runBattleRounds(activeCases, pickedBot);
+    runBattleRounds(activeCases);
   };
 
-  const runBattleRounds = async (casesToOpen: Case[], opponentName: string) => {
+  const runBattleRounds = async (casesToOpen: Case[]) => {
     const collectedUser: Item[] = [];
     const collectedBot: Item[] = [];
 
@@ -487,7 +481,6 @@ export default function BattlesPage() {
                   key={preset.id}
                   onClick={() => {
                     setSelectedPreset(preset);
-                    setIsCustomMode(false);
                   }}
                   className={`group relative rounded-xl border p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 ${
                     selected
