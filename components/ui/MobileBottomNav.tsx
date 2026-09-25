@@ -16,7 +16,8 @@ export default function MobileBottomNav() {
   const pathname = usePathname();
   const { inventory } = useInventory();
   return (
-    <nav
+    <div
+      role="navigation"
       aria-label="Mobile navigation"
       className="lg:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/[0.06] bg-ink-900/95 backdrop-blur-xl"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
